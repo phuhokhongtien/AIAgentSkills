@@ -1,6 +1,6 @@
 # AIAgentSkills
 
-Tập hợp các custom skills cho Claude Code — giúp AI agent thực hiện các tác vụ phức tạp như một developer thực sự.
+A collection of custom skills for Claude Code — enabling AI agents to perform complex developer tasks autonomously.
 
 ---
 
@@ -8,121 +8,121 @@ Tập hợp các custom skills cho Claude Code — giúp AI agent thực hiện 
 
 ### `api-flow-debugger`
 
-Debug một API endpoint bằng cách trace toàn bộ request flow — từ curl đến response — **mà không cần sửa bất kỳ dòng code nào**.
+Debug any API endpoint by tracing the full request flow — from curl to response — **without modifying a single line of source code**.
 
-**Khi nào dùng:**
-- Endpoint trả về lỗi (4xx, 5xx) và không biết lỗi ở đâu
-- Response trả về data sai, không như kỳ vọng
-- API chạy chậm, nghi có N+1 hoặc bottleneck
-- Muốn hiểu luồng xử lý request đi qua những middleware/service nào
+**When to use:**
+- An endpoint returns an error (4xx, 5xx) and you don't know why
+- The response returns unexpected or incorrect data
+- The API is slow and you suspect N+1 queries or a bottleneck
+- You want to understand exactly which middleware and services a request passes through
 
-**Hỗ trợ:** Node.js (Express, Fastify, NestJS), Python (FastAPI, Django, Flask), Go (Gin, Fiber), **C# .NET** (ASP.NET Core), Java/Spring Boot, PHP/Laravel, Ruby/Rails
+**Supported stacks:** Node.js (Express, Fastify, NestJS), Python (FastAPI, Django, Flask), Go (Gin, Fiber), **C# .NET** (ASP.NET Core), Java/Spring Boot, PHP/Laravel, Ruby/Rails
 
 ---
 
-## Cài đặt
+## Installation
 
-Skills được đặt trong `.claude/skills/` — Claude Code tự discover khi khởi động session trong thư mục này.
+Skills live in `.claude/skills/` — Claude Code auto-discovers them when you start a session in this directory.
 
 ```bash
-cd D:\PROJECTS\AIAgentSkills
-claude   # mở Claude Code trong thư mục này
+cd /your/path/to/AIAgentSkills
+claude
 ```
 
-Không cần cài đặt thêm gì.
+No additional setup required.
 
 ---
 
-## Cách dùng `api-flow-debugger`
+## Using `api-flow-debugger`
 
-### Bước 1 — Invoke skill
+### Step 1 — Invoke the skill
 
-Trong session Claude Code, gõ:
+In a Claude Code session, type:
 
 ```
 /api-flow-debugger
 ```
 
-Hoặc mô tả tự nhiên, Claude sẽ tự nhận:
-> *"debug endpoint này cho mình"*
-> *"tại sao curl này bị 500?"*
-> *"trace request flow của API này"*
+Or just describe what you need in natural language — Claude will pick it up automatically:
+> *"debug this endpoint for me"*
+> *"why is this curl returning 500?"*
+> *"trace the request flow for this API"*
 
-### Bước 2 — Cung cấp curl command
+### Step 2 — Provide a curl command
 
-Paste curl command của endpoint cần debug:
+Paste the curl command for the endpoint you want to debug:
 
 ```bash
-# Ví dụ 1 — endpoint trả 500
+# Example 1 — endpoint returning 500
 curl http://localhost:5000/api/users/abc
 
-# Ví dụ 2 — POST với body
+# Example 2 — POST with a request body
 curl -X POST http://localhost:3000/api/orders \
   -H "Authorization: Bearer eyJhbGc..." \
   -H "Content-Type: application/json" \
   -d '{"productId": 42, "quantity": 2}'
 
-# Ví dụ 3 — chỉ có URL cũng được, skill sẽ tự bổ sung headers
+# Example 3 — a bare URL works too; the skill will fill in missing headers
 curl http://localhost:8080/api/v1/users?active=true
 ```
 
-> **Không cần curl hoàn chỉnh.** Skill sẽ tự detect những gì còn thiếu (Content-Type, Accept header, port) và hỏi bổ sung nếu cần.
+> **The curl doesn't need to be complete.** The skill auto-detects missing parts (Content-Type, Accept header, port) and asks for clarification only when necessary (e.g. token placeholders like `<TOKEN>`).
 
-### Bước 3 — Skill tự chạy
+### Step 3 — The skill runs automatically
 
-Skill sẽ tự động:
+The skill will:
 
-1. **Parse & validate** curl — tự thêm headers còn thiếu, hỏi nếu có placeholder `<TOKEN>`
-2. **Detect tech stack** — đọc `package.json` / `*.csproj` / `go.mod` / ... để nhận diện framework
-3. **Map code flow** — tìm route → middleware → handler → service → DB theo thứ tự
-4. **Start dev server** với debug mode (không sửa code, chỉ dùng env vars)
-5. **Execute curl** — chạy với `-v` để capture full HTTP detail + timing
-6. **Phân tích** — correlate logs với checkpoint map, detect N+1 / bottleneck
-7. **Tạo HTML report** và **tự mở trên browser**
+1. **Parse & validate** the curl — add missing headers, prompt for any token placeholders
+2. **Detect the tech stack** — reads `package.json`, `*.csproj`, `go.mod`, etc.
+3. **Map the code flow** — locates route → middleware → handler → service → DB in order
+4. **Start the dev server** in debug mode using environment variables only (no code changes)
+5. **Execute the curl** with `-v` to capture full HTTP details and timing
+6. **Analyze** — correlates server logs with the checkpoint map, detects N+1 and bottlenecks
+7. **Generate an HTML report** and **open it automatically in your browser**
 
-### Bước 4 — Đọc HTML Report
+### Step 4 — Review the HTML Report
 
-Report được lưu tại working directory với tên `debug-report-YYYYMMDD-HHmmss.html` và tự mở. Bao gồm:
+The report is saved as `debug-report-YYYYMMDD-HHmmss.html` in the working directory and opens automatically. It includes:
 
-| Section | Nội dung |
+| Section | Contents |
 |---------|----------|
-| **Request** | curl đã enhance, method, URL, headers, body |
-| **Checkpoint Trace** | Timeline ✅/❌ per step với file:line |
-| **HTTP Response** | Status code, response headers, body (formatted) |
-| **Timing** | Connect / Server processing / Download bar chart |
-| **Performance** | N+1 queries, bottleneck, slow queries nếu có |
-| **Root Cause** | Mô tả chính xác lỗi ở đâu |
-| **Suggested Fix** | Code fix cụ thể |
+| **Request** | Enhanced curl command, method, URL, headers, body |
+| **Checkpoint Trace** | Visual ✅/❌ timeline per step with file:line |
+| **HTTP Response** | Status code, response headers, formatted body |
+| **Timing** | Bar chart: connect / server processing / download |
+| **Performance** | N+1 queries, bottleneck, slow queries (if detected) |
+| **Root Cause** | Exact description of what went wrong and where |
+| **Suggested Fix** | Concrete, actionable code fix |
 
 ---
 
-## Test nhanh với sample project
+## Quick Test with the Sample Project
 
-Có sẵn `.NET` sample project với 2 intentional bugs:
+A `.NET` sample project is included with two intentional bugs for testing:
 
 ```bash
-# Terminal 1 — start server
-cd D:\PROJECTS\AIAgentSkills\samples\dotnet-web-api-sample
+# Terminal 1 — start the server
+cd samples/dotnet-web-api-sample
 ASPNETCORE_ENVIRONMENT=Development dotnet run
-# Server chạy tại http://localhost:5000
+# Server runs at http://localhost:5000
 ```
 
 ```bash
-# Test case 1: InvalidCastException (500)
+# Test case 1: InvalidCastException → triggers a 500 error
 curl http://localhost:5000/api/users/abc
 
-# Test case 2: N+1 queries (200 nhưng slow)
+# Test case 2: N+1 queries → returns 200 but hits the DB once per user
 curl http://localhost:5000/api/users
 
-# Test case 3: Works fine (baseline)
+# Test case 3: Happy path — works correctly
 curl http://localhost:5000/api/users/1
 ```
 
-Paste bất kỳ curl nào trên vào skill để xem full debug report.
+Paste any of the above curls into the skill to see a full debug report.
 
 ---
 
-## Cấu trúc project
+## Project Structure
 
 ```
 AIAgentSkills/
@@ -130,33 +130,34 @@ AIAgentSkills/
 │   ├── settings.json
 │   └── skills/
 │       └── api-flow-debugger/
-│           ├── SKILL.md                    ← workflow chính (7 phases)
+│           ├── SKILL.md                     ← main workflow (7 phases)
 │           ├── assets/
-│           │   └── report-template.html    ← HTML report template
+│           │   └── report-template.html     ← self-contained HTML report template
 │           └── references/
-│               ├── debug-env-vars.md       ← debug start commands per framework
-│               ├── flow-mapping-patterns.md ← grep patterns tìm route/handler
-│               ├── performance-analysis.md  ← N+1, bottleneck detection
+│               ├── debug-env-vars.md        ← debug start commands per framework
+│               ├── flow-mapping-patterns.md ← grep patterns to find routes/handlers
+│               ├── performance-analysis.md  ← N+1 and bottleneck detection guide
 │               └── trace-report-format.md  ← text fallback + scenario examples
-├── skills/                                 ← source (mirror của .claude/skills)
+├── skills/                                  ← source mirror of .claude/skills/
 │   └── api-flow-debugger/
 ├── samples/
-│   └── dotnet-web-api-sample/              ← .NET test project có sẵn bugs
+│   └── dotnet-web-api-sample/               ← .NET test project with intentional bugs
+├── api-flow-debugger.skill                  ← packaged distributable
 └── README.md
 ```
 
 ---
 
-## Thêm skill mới
+## Adding a New Skill
 
-1. Tạo thư mục: `.claude/skills/<tên-skill>/`
-2. Tạo `SKILL.md` với frontmatter:
+1. Create the directory: `.claude/skills/<skill-name>/`
+2. Create `SKILL.md` with frontmatter:
    ```yaml
    ---
-   name: tên-skill
-   description: This skill should be used when... (third-person, specific triggers)
+   name: skill-name
+   description: This skill should be used when... (third-person, include specific trigger phrases)
    version: 0.1.0
    tools: Read, Glob, Grep, Bash
    ---
    ```
-3. Restart session Claude Code để load skill mới
+3. Restart your Claude Code session to load the new skill.
