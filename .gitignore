@@ -1,0 +1,13 @@
+# .NET build output
+samples/**/bin/
+samples/**/obj/
+
+# Generated debug reports
+debug-report-*.html
+
+# Claude local settings (personal, not shared)
+.claude/settings.local.json
+
+# OS
+.DS_Store
+Thumbs.db

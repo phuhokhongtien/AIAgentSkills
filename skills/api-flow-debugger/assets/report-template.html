@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API Flow Debug Report — {{ENDPOINT}}</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #21262d;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --green: #3fb950;
+    --green-bg: #0d2a0d;
+    --red: #f85149;
+    --red-bg: #2a0d0d;
+    --yellow: #d29922;
+    --yellow-bg: #2a200d;
+    --blue: #58a6ff;
+    --blue-bg: #0d1a2a;
+    --orange: #e3b341;
+    --purple: #bc8cff;
+    --code-bg: #0d1117;
+    --font-mono: 'Cascadia Code', 'Fira Code', 'Consolas', 'Monaco', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  /* Header */
+  .header {
+    background: linear-gradient(135deg, #1a1f2e 0%, #161b22 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 20px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-icon { font-size: 24px; }
+  .header-title { font-size: 18px; font-weight: 600; }
+  .header-meta { color: var(--text-muted); font-size: 12px; margin-top: 2px; }
+  .status-badge {
+    margin-left: auto;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 16px;
+    font-family: var(--font-mono);
+  }
+  .status-2xx { background: var(--green-bg); color: var(--green); border: 1px solid var(--green); }
+  .status-4xx { background: var(--yellow-bg); color: var(--yellow); border: 1px solid var(--yellow); }
+  .status-5xx { background: var(--red-bg); color: var(--red); border: 1px solid var(--red); }
+
+  /* Layout */
+  .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+  /* Summary bar */
+  .summary-bar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .metric-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .metric-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
+  .metric-value { font-size: 22px; font-weight: 600; font-family: var(--font-mono); margin-top: 4px; }
+  .metric-value.ok { color: var(--green); }
+  .metric-value.warn { color: var(--yellow); }
+  .metric-value.error { color: var(--red); }
+
+  /* Sections */
+  .section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 18px;
+    cursor: pointer;
+    user-select: none;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+  .section-header:hover { background: #2d333b; }
+  .section-title { font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .section-badge {
+    margin-left: auto;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .badge-ok { background: var(--green-bg); color: var(--green); }
+  .badge-error { background: var(--red-bg); color: var(--red); }
+  .badge-warn { background: var(--yellow-bg); color: var(--yellow); }
+  .badge-info { background: var(--blue-bg); color: var(--blue); }
+  .chevron { transition: transform 0.2s; color: var(--text-muted); }
+  .collapsed .chevron { transform: rotate(-90deg); }
+  .section-body { padding: 18px; }
+  .section-body.hidden { display: none; }
+
+  /* Code blocks */
+  pre, code {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+  }
+  .code-block {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 14px;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  .code-block.curl { color: #58a6ff; }
+  .code-block.response-body { color: #e6edf3; }
+  .code-block.logs { color: #8b949e; font-size: 11.5px; max-height: 300px; overflow-y: auto; }
+
+  /* Key-value pairs */
+  .kv-table { width: 100%; border-collapse: collapse; }
+  .kv-table tr td { padding: 5px 0; vertical-align: top; }
+  .kv-table tr td:first-child { color: var(--text-muted); width: 160px; padding-right: 16px; font-size: 12px; }
+  .kv-table tr td:last-child { font-family: var(--font-mono); font-size: 12.5px; }
+
+  /* Stack info */
+  .stack-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .pill {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 3px 12px;
+    font-size: 12px;
+    color: var(--blue);
+  }
+
+  /* Checkpoint timeline */
+  .timeline { display: flex; flex-direction: column; gap: 0; }
+  .checkpoint {
+    display: flex;
+    gap: 0;
+    position: relative;
+  }
+  .checkpoint-connector {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 32px;
+    flex-shrink: 0;
+  }
+  .checkpoint-dot {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    flex-shrink: 0;
+    z-index: 1;
+  }
+  .dot-ok { background: var(--green-bg); border: 2px solid var(--green); }
+  .dot-error { background: var(--red-bg); border: 2px solid var(--red); }
+  .dot-skip { background: var(--surface2); border: 2px solid var(--border); }
+  .checkpoint-line {
+    width: 2px;
+    flex: 1;
+    min-height: 16px;
+    background: var(--border);
+  }
+  .checkpoint-content {
+    flex: 1;
+    padding: 4px 0 20px 12px;
+  }
+  .checkpoint:last-child .checkpoint-line { display: none; }
+  .checkpoint-label {
+    font-weight: 600;
+    font-size: 13px;
+    margin-bottom: 4px;
+  }
+  .checkpoint-label.ok { color: var(--green); }
+  .checkpoint-label.error { color: var(--red); }
+  .checkpoint-location {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--blue);
+    margin-bottom: 4px;
+  }
+  .checkpoint-evidence {
+    font-size: 12px;
+    color: var(--text-muted);
+    background: var(--code-bg);
+    border-left: 2px solid var(--border);
+    padding: 4px 8px;
+    margin-top: 6px;
+    font-family: var(--font-mono);
+    border-radius: 0 4px 4px 0;
+  }
+  .checkpoint-error-box {
+    background: var(--red-bg);
+    border: 1px solid var(--red);
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-top: 8px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--red);
+    white-space: pre-wrap;
+  }
+  .checkpoint-timing {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-left: 8px;
+  }
+
+  /* Timing bar */
+  .timing-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .timing-label { width: 160px; font-size: 12px; color: var(--text-muted); flex-shrink: 0; }
+  .timing-bar-container { flex: 1; background: var(--surface2); border-radius: 4px; height: 16px; overflow: hidden; }
+  .timing-bar { height: 100%; border-radius: 4px; min-width: 4px; transition: width 0.3s; }
+  .bar-connect { background: var(--blue); }
+  .bar-server { background: var(--purple); }
+  .bar-download { background: var(--green); }
+  .timing-value { font-family: var(--font-mono); font-size: 12px; width: 70px; text-align: right; }
+
+  /* Performance issues */
+  .perf-issue {
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    border-left: 4px solid;
+  }
+  .perf-critical { background: var(--red-bg); border-color: var(--red); }
+  .perf-high { background: #2a1a0d; border-color: var(--orange); }
+  .perf-medium { background: var(--yellow-bg); border-color: var(--yellow); }
+  .perf-low { background: var(--blue-bg); border-color: var(--blue); }
+  .perf-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .perf-type-badge {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.1);
+  }
+  .perf-description { font-size: 13px; margin-bottom: 6px; }
+  .perf-evidence { font-family: var(--font-mono); font-size: 11.5px; color: var(--text-muted); margin-bottom: 6px; }
+  .perf-fix { font-size: 12px; color: var(--green); }
+  .perf-fix::before { content: "Fix: "; font-weight: 600; }
+
+  /* Root cause + fix */
+  .root-cause-box {
+    background: var(--red-bg);
+    border: 1px solid var(--red);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .root-cause-title { color: var(--red); font-weight: 600; font-size: 13px; margin-bottom: 8px; }
+  .root-cause-text { font-size: 13px; line-height: 1.7; }
+
+  .fix-box {
+    background: var(--green-bg);
+    border: 1px solid var(--green);
+    border-radius: 8px;
+    padding: 16px;
+  }
+  .fix-title { color: var(--green); font-weight: 600; font-size: 13px; margin-bottom: 8px; }
+  .fix-text { font-size: 13px; line-height: 1.7; }
+
+  /* Response body */
+  .response-status-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .http-status-code {
+    font-family: var(--font-mono);
+    font-size: 28px;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 8px;
+  }
+  .http-status-text { color: var(--text-muted); font-size: 14px; }
+
+  /* No issues placeholder */
+  .no-issues {
+    text-align: center;
+    padding: 24px;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+  .no-issues .icon { font-size: 32px; display: block; margin-bottom: 8px; }
+
+  /* Divider */
+  .divider { height: 1px; background: var(--border); margin: 12px 0; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--surface); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <span class="header-icon">🔍</span>
+  <div>
+    <div class="header-title">API Flow Debug Report</div>
+    <div class="header-meta">{{FRAMEWORK}} · {{TIMESTAMP}} · {{DURATION_MS}}ms total</div>
+  </div>
+  <div class="status-badge {{STATUS_CLASS}}">{{HTTP_STATUS_CODE}} {{HTTP_STATUS_TEXT}}</div>
+</div>
+
+<div class="container">
+
+  <!-- Summary metrics -->
+  <div class="summary-bar">
+    <div class="metric-card">
+      <div class="metric-label">HTTP Status</div>
+      <div class="metric-value {{STATUS_METRIC_CLASS}}">{{HTTP_STATUS_CODE}}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Total Time</div>
+      <div class="metric-value {{TOTAL_TIME_CLASS}}">{{TOTAL_MS}}ms</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">TTFB</div>
+      <div class="metric-value {{TTFB_CLASS}}">{{TTFB_MS}}ms</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">DB Queries</div>
+      <div class="metric-value {{DB_CLASS}}">{{DB_QUERY_COUNT}}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Checkpoints</div>
+      <div class="metric-value">{{CHECKPOINTS_OK}}/{{CHECKPOINTS_TOTAL}}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Perf Issues</div>
+      <div class="metric-value {{PERF_CLASS}}">{{PERF_ISSUE_COUNT}}</div>
+    </div>
+  </div>
+
+  <!-- Request -->
+  <div class="section">
+    <div class="section-header" onclick="toggle(this)">
+      <span>📤</span>
+      <span class="section-title">Request</span>
+      <span class="section-badge badge-info">{{HTTP_METHOD}} {{ENDPOINT_PATH}}</span>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="section-body">
+      <table class="kv-table">
+        <tr><td>Method</td><td>{{HTTP_METHOD}}</td></tr>
+        <tr><td>URL</td><td>{{FULL_URL}}</td></tr>
+        <tr><td>Framework</td><td>{{FRAMEWORK}}</td></tr>
+        <tr><td>Entry Point</td><td>{{ENTRY_POINT}}</td></tr>
+      </table>
+      <div class="divider"></div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">curl command (as executed)</div>
+      <div class="code-block curl">{{CURL_COMMAND}}</div>
+      {{#CURL_ENHANCED_NOTE}}
+      <div style="margin-top:8px;font-size:12px;color:var(--yellow);">⚡ Auto-enhanced: {{CURL_ENHANCED_NOTE}}</div>
+      {{/CURL_ENHANCED_NOTE}}
+      {{#REQUEST_BODY}}
+      <div style="font-size:12px;color:var(--text-muted);margin:12px 0 6px;">Request body</div>
+      <div class="code-block">{{REQUEST_BODY}}</div>
+      {{/REQUEST_BODY}}
+    </div>
+  </div>
+
+  <!-- Checkpoint trace -->
+  <div class="section">
+    <div class="section-header" onclick="toggle(this)">
+      <span>🗺️</span>
+      <span class="section-title">Checkpoint Trace</span>
+      <span class="section-badge {{TRACE_BADGE_CLASS}}">{{CHECKPOINTS_OK}}/{{CHECKPOINTS_TOTAL}} passed</span>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="section-body">
+      <div class="timeline" id="timeline">
+        <!-- Injected by JS from CHECKPOINTS_JSON -->
+      </div>
+    </div>
+  </div>
+
+  <!-- HTTP Response -->
+  <div class="section">
+    <div class="section-header" onclick="toggle(this)">
+      <span>📥</span>
+      <span class="section-title">HTTP Response</span>
+      <span class="section-badge {{STATUS_BADGE_CLASS}}">{{HTTP_STATUS_CODE}} {{HTTP_STATUS_TEXT}}</span>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="section-body">
+      <div class="response-status-row">
+        <div class="http-status-code {{STATUS_CLASS}}">{{HTTP_STATUS_CODE}}</div>
+        <div class="http-status-text">{{HTTP_STATUS_TEXT}}</div>
+      </div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">Response headers</div>
+      <div class="code-block" id="resp-headers">{{RESPONSE_HEADERS}}</div>
+      <div style="font-size:12px;color:var(--text-muted);margin:12px 0 6px;">Response body</div>
+      <div class="code-block response-body" id="resp-body">{{RESPONSE_BODY}}</div>
+    </div>
+  </div>
+
+  <!-- Timing -->
+  <div class="section">
+    <div class="section-header" onclick="toggle(this)">
+      <span>⏱️</span>
+      <span class="section-title">Timing Breakdown</span>
+      <span class="section-badge badge-info">{{TOTAL_MS}}ms</span>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="section-body" id="timing-section">
+      <!-- Injected by JS from TIMING_JSON -->
+    </div>
+  </div>
+
+  <!-- Performance Issues -->
+  <div class="section">
+    <div class="section-header" onclick="toggle(this)">
+      <span>⚡</span>
+      <span class="section-title">Performance Analysis</span>
+      <span class="section-badge {{PERF_BADGE_CLASS}}">{{PERF_ISSUE_COUNT}} issues</span>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="section-body" id="perf-section">
+      <!-- Injected by JS from PERF_ISSUES_JSON -->
+    </div>
+  </div>
+
+  <!-- Root Cause & Fix -->
+  <div class="section">
+    <div class="section-header" onclick="toggle(this)">
+      <span>🎯</span>
+      <span class="section-title">Root Cause & Fix</span>
+      <span class="section-badge {{ROOT_CAUSE_BADGE}}">{{ROOT_CAUSE_SEVERITY}}</span>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="section-body">
+      <div class="root-cause-box">
+        <div class="root-cause-title">Root Cause</div>
+        <div class="root-cause-text">{{ROOT_CAUSE}}</div>
+      </div>
+      <div class="fix-box">
+        <div class="fix-title">Suggested Fix</div>
+        <div class="fix-text">{{SUGGESTED_FIX}}</div>
+        {{#FIX_CODE}}
+        <div style="margin-top:10px;" class="code-block">{{FIX_CODE}}</div>
+        {{/FIX_CODE}}
+      </div>
+    </div>
+  </div>
+
+  <!-- Raw Server Logs -->
+  <div class="section">
+    <div class="section-header collapsed" onclick="toggle(this)">
+      <span>📋</span>
+      <span class="section-title">Raw Server Logs</span>
+      <span class="section-badge badge-info">{{LOG_LINE_COUNT}} lines</span>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="section-body hidden">
+      <div class="code-block logs" id="raw-logs">{{RAW_SERVER_LOGS}}</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// Collapse/expand sections
+function toggle(header) {
+  const section = header.closest('.section');
+  const body = section.querySelector('.section-body');
+  const isCollapsed = header.classList.contains('collapsed');
+  if (isCollapsed) {
+    header.classList.remove('collapsed');
+    body.classList.remove('hidden');
+  } else {
+    header.classList.add('collapsed');
+    body.classList.add('hidden');
+  }
+}
+
+// --- Data injected by Claude (replace these with actual JSON) ---
+const CHECKPOINTS = {{CHECKPOINTS_JSON}};
+const TIMING = {{TIMING_JSON}};
+const PERF_ISSUES = {{PERF_ISSUES_JSON}};
+
+// Render checkpoint timeline
+const timeline = document.getElementById('timeline');
+CHECKPOINTS.forEach((cp, i) => {
+  const isOk = cp.status === 'ok';
+  const isError = cp.status === 'error';
+  const isLast = i === CHECKPOINTS.length - 1;
+
+  timeline.innerHTML += `
+    <div class="checkpoint">
+      <div class="checkpoint-connector">
+        <div class="checkpoint-dot ${isOk ? 'dot-ok' : isError ? 'dot-error' : 'dot-skip'}">
+          ${isOk ? '✓' : isError ? '✗' : '–'}
+        </div>
+        ${!isLast ? '<div class="checkpoint-line"></div>' : ''}
+      </div>
+      <div class="checkpoint-content">
+        <div class="checkpoint-label ${isOk ? 'ok' : isError ? 'error' : ''}">
+          [${cp.id}] ${cp.label}
+          ${cp.timing_ms ? `<span class="checkpoint-timing">${cp.timing_ms}ms</span>` : ''}
+        </div>
+        ${cp.file ? `<div class="checkpoint-location">${cp.file}${cp.line ? ':' + cp.line : ''}</div>` : ''}
+        ${cp.evidence ? `<div class="checkpoint-evidence">${escHtml(cp.evidence)}</div>` : ''}
+        ${cp.error_detail ? `<div class="checkpoint-error-box">${escHtml(cp.error_detail)}</div>` : ''}
+      </div>
+    </div>`;
+});
+
+// Render timing bars
+const timingSection = document.getElementById('timing-section');
+const maxMs = Math.max(TIMING.connect_ms + TIMING.server_ms + TIMING.download_ms, 1);
+timingSection.innerHTML = `
+  <div class="timing-row">
+    <div class="timing-label">TCP Connect</div>
+    <div class="timing-bar-container"><div class="timing-bar bar-connect" style="width:${pct(TIMING.connect_ms, maxMs)}%"></div></div>
+    <div class="timing-value">${TIMING.connect_ms}ms</div>
+  </div>
+  <div class="timing-row">
+    <div class="timing-label">Server Processing</div>
+    <div class="timing-bar-container"><div class="timing-bar bar-server" style="width:${pct(TIMING.server_ms, maxMs)}%"></div></div>
+    <div class="timing-value">${TIMING.server_ms}ms</div>
+  </div>
+  <div class="timing-row">
+    <div class="timing-label">Download</div>
+    <div class="timing-bar-container"><div class="timing-bar bar-download" style="width:${pct(TIMING.download_ms, maxMs)}%"></div></div>
+    <div class="timing-value">${TIMING.download_ms}ms</div>
+  </div>
+  <div class="divider"></div>
+  <div class="timing-row">
+    <div class="timing-label" style="color:var(--text);font-weight:600;">Total</div>
+    <div class="timing-bar-container"><div class="timing-bar" style="width:100%;background:var(--purple)"></div></div>
+    <div class="timing-value" style="color:var(--text);font-weight:600;">${TIMING.total_ms}ms</div>
+  </div>`;
+
+// Render performance issues
+const perfSection = document.getElementById('perf-section');
+if (PERF_ISSUES.length === 0) {
+  perfSection.innerHTML = '<div class="no-issues"><span class="icon">✅</span>No performance issues detected.</div>';
+} else {
+  PERF_ISSUES.forEach(issue => {
+    perfSection.innerHTML += `
+      <div class="perf-issue perf-${issue.severity}">
+        <div class="perf-header">
+          <span class="perf-type-badge">${issue.type.replace(/_/g, ' ')}</span>
+          <strong>${severityLabel(issue.severity)}</strong>
+        </div>
+        <div class="perf-description">${issue.description}</div>
+        ${issue.evidence ? `<div class="perf-evidence">${escHtml(issue.evidence)}</div>` : ''}
+        ${issue.fix ? `<div class="perf-fix">${issue.fix}</div>` : ''}
+      </div>`;
+  });
+}
+
+function pct(val, max) { return Math.min(100, Math.round((val / max) * 100)); }
+function severityLabel(s) {
+  return { critical: '🔴 Critical', high: '🟠 High', medium: '🟡 Medium', low: '🔵 Low' }[s] || s;
+}
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Syntax-highlight JSON in response body
+const respBody = document.getElementById('resp-body');
+try {
+  const parsed = JSON.parse(respBody.textContent);
+  respBody.textContent = JSON.stringify(parsed, null, 2);
+} catch(e) {}
+</script>
+</body>
+</html>
