@@ -1,0 +1,23 @@
+// This file has the .cs.broken extension to keep it out of compilation by default.
+//
+// To test the Phase 2.5 Build Verification fail flow of api-flow-debugger:
+//   1. Rename:  mv BuildFailDemo/BrokenEndpoint.cs.broken BuildFailDemo/BrokenEndpoint.cs
+//   2. Run the skill against any endpoint — Phase 2.5 will run `dotnet build --no-restore`
+//      which will fail with CS-prefixed compile errors and prompt: abort or continue?
+//   3. Restore:  mv BuildFailDemo/BrokenEndpoint.cs BuildFailDemo/BrokenEndpoint.cs.broken
+
+using Microsoft.AspNetCore.Mvc;
+
+namespace SampleApi.BuildFailDemo;
+
+[ApiController]
+[Route("api/broken")]
+public class BrokenEndpoint : ControllerBase
+{
+    public IActionResult GetBroken()
+    {
+        // Intentional syntax errors below — DO NOT fix:
+        var x: = 42;                   // CS1002, CS1003: invalid declaration
+        return Ok(unknownIdentifier);  // CS0103: name 'unknownIdentifier' does not exist
+    }
+}

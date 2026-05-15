@@ -313,6 +313,195 @@
   /* Divider */
   .divider { height: 1px; background: var(--border); margin: 12px 0; }
 
+  /* Build status */
+  .build-card {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 12px;
+  }
+  .build-card .kv-table tr td:first-child { width: 120px; }
+  .build-error-banner {
+    background: var(--red-bg);
+    border: 1px solid var(--red);
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin: 10px 0;
+    color: var(--red);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    white-space: pre-wrap;
+  }
+  .build-warning-banner {
+    background: var(--yellow-bg);
+    border: 1px solid var(--yellow);
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin: 10px 0;
+    color: var(--yellow);
+    font-size: 12px;
+  }
+
+  /* DB Queries — Rich Viewer */
+  .db-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .db-mini-card {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+  }
+  .db-mini-card .label { font-size: 10px; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px; }
+  .db-mini-card .value { font-size: 18px; font-weight: 600; font-family: var(--font-mono); margin-top: 4px; }
+  .db-mini-card .value.warn { color: var(--yellow); }
+  .db-mini-card .value.error { color: var(--red); }
+  .db-mini-card .value.ok { color: var(--green); }
+
+  .db-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+    align-items: center;
+  }
+  .db-filter-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .db-filter-btn:hover { background: #2d333b; }
+  .db-filter-btn.active { background: var(--blue-bg); border-color: var(--blue); color: var(--blue); }
+  .db-sort-select, .db-search-input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: inherit;
+  }
+  .db-search-input { flex: 1; min-width: 180px; }
+
+  .query-timeline {
+    display: flex;
+    gap: 2px;
+    height: 36px;
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px;
+    margin-bottom: 14px;
+    overflow-x: auto;
+  }
+  .query-bar {
+    min-width: 4px;
+    background: var(--green);
+    border-radius: 2px;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.15s;
+    position: relative;
+  }
+  .query-bar:hover { opacity: 0.7; transform: scaleY(1.1); }
+  .query-bar.slow { background: var(--yellow); }
+  .query-bar.critical { background: var(--red); }
+  .query-bar.flash { animation: flash 0.6s ease-out; }
+  @keyframes flash {
+    0% { box-shadow: 0 0 0 0 var(--blue); }
+    50% { box-shadow: 0 0 0 4px var(--blue); }
+    100% { box-shadow: 0 0 0 0 transparent; }
+  }
+
+  .query-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+  }
+  .query-table th {
+    text-align: left;
+    padding: 8px 10px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    font-weight: 600;
+    user-select: none;
+  }
+  .query-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+    font-family: var(--font-mono);
+  }
+  .query-row { cursor: pointer; transition: background 0.1s; }
+  .query-row:hover { background: rgba(255,255,255,0.03); }
+  .query-row.expanded { background: rgba(88, 166, 255, 0.08); }
+  .query-row.slow td { color: var(--yellow); }
+  .query-row.critical td { color: var(--red); }
+  .query-row.hidden { display: none; }
+  .query-row .sql-preview {
+    max-width: 600px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .query-detail-row td { background: var(--code-bg); padding: 14px 18px; }
+  .query-detail-row .detail-grid {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 6px 16px;
+    font-size: 12px;
+  }
+  .query-detail-row .detail-grid .k { color: var(--text-muted); font-family: inherit; }
+  .query-detail-row .detail-grid .v { font-family: var(--font-mono); word-break: break-all; }
+  .query-detail-row .full-sql {
+    margin-top: 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 10px 12px;
+    white-space: pre-wrap;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    line-height: 1.5;
+  }
+  .copy-sql-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--blue);
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+    margin-top: 8px;
+    font-family: inherit;
+  }
+  .copy-sql-btn:hover { background: var(--blue-bg); }
+
+  /* SQL syntax highlighting (CSS-only via JS-applied classes) */
+  .sql-kw { color: #569cd6; font-weight: 600; }
+  .sql-str { color: #ce9178; }
+  .sql-num { color: #b5cea8; }
+  .sql-fn  { color: #dcdcaa; }
+
+  /* Shape group color cycle — visually mark N+1 repetition */
+  .shape-color-0 { border-left: 3px solid #f48771; }
+  .shape-color-1 { border-left: 3px solid #b5cea8; }
+  .shape-color-2 { border-left: 3px solid #c586c0; }
+  .shape-color-3 { border-left: 3px solid #569cd6; }
+  .shape-color-4 { border-left: 3px solid #dcdcaa; }
+  .shape-color-5 { border-left: 3px solid #4ec9b0; }
+
   /* Scrollbar */
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: var(--surface); }
@@ -351,14 +540,55 @@
       <div class="metric-value {{DB_CLASS}}">{{DB_QUERY_COUNT}}</div>
     </div>
     <div class="metric-card">
+      <div class="metric-label">DB Time</div>
+      <div class="metric-value {{DB_TIME_CLASS}}">{{DB_TIME_MS}}ms</div>
+    </div>
+    <div class="metric-card">
       <div class="metric-label">Checkpoints</div>
       <div class="metric-value">{{CHECKPOINTS_OK}}/{{CHECKPOINTS_TOTAL}}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Build</div>
+      <div class="metric-value {{BUILD_METRIC_CLASS}}">{{BUILD_STATUS_BADGE}}</div>
     </div>
     <div class="metric-card">
       <div class="metric-label">Perf Issues</div>
       <div class="metric-value {{PERF_CLASS}}">{{PERF_ISSUE_COUNT}}</div>
     </div>
   </div>
+
+  <!-- Build Status (conditional) -->
+  {{#BUILD_SECTION}}
+  <div class="section">
+    <div class="section-header" onclick="toggle(this)">
+      <span>🛠️</span>
+      <span class="section-title">Build &amp; Dependencies</span>
+      <span class="section-badge {{BUILD_BADGE_CLASS}}">{{BUILD_STATUS}}</span>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="section-body">
+      <div class="build-card">
+        <table class="kv-table">
+          <tr><td>Status</td><td>{{BUILD_STATUS}}</td></tr>
+          <tr><td>Command</td><td>{{BUILD_COMMAND}}</td></tr>
+          <tr><td>Duration</td><td>{{BUILD_DURATION_MS}}ms</td></tr>
+        </table>
+        <table class="kv-table">
+          <tr><td>User Choice</td><td>{{BUILD_USER_CHOICE}}</td></tr>
+          <tr><td>Stack</td><td>{{FRAMEWORK}}</td></tr>
+        </table>
+      </div>
+      {{#BUILD_ERROR_SUMMARY}}
+      <div class="build-error-banner">{{BUILD_ERROR_SUMMARY}}</div>
+      {{/BUILD_ERROR_SUMMARY}}
+      {{#BUILD_CONTINUED_WARNING}}
+      <div class="build-warning-banner">⚠️ Build failed but user chose to continue. Traced binary may not reflect current source code.</div>
+      {{/BUILD_CONTINUED_WARNING}}
+      <div style="font-size:12px;color:var(--text-muted);margin:12px 0 6px;">Build output (last 30 lines)</div>
+      <div class="code-block logs">{{BUILD_OUTPUT_TAIL}}</div>
+    </div>
+  </div>
+  {{/BUILD_SECTION}}
 
   <!-- Request -->
   <div class="section">
@@ -420,6 +650,84 @@
       <div class="code-block" id="resp-headers">{{RESPONSE_HEADERS}}</div>
       <div style="font-size:12px;color:var(--text-muted);margin:12px 0 6px;">Response body</div>
       <div class="code-block response-body" id="resp-body">{{RESPONSE_BODY}}</div>
+    </div>
+  </div>
+
+  <!-- DB Queries Rich Viewer -->
+  <div class="section">
+    <div class="section-header" onclick="toggle(this)">
+      <span>🗄️</span>
+      <span class="section-title">DB Queries</span>
+      <span class="section-badge {{DB_BADGE_CLASS}}">{{DB_QUERY_COUNT}} queries · {{DB_TIME_MS}}ms</span>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="section-body">
+      <!-- Summary cards -->
+      <div class="db-summary">
+        <div class="db-mini-card">
+          <div class="label">Total</div>
+          <div class="value">{{DB_QUERY_COUNT}}</div>
+        </div>
+        <div class="db-mini-card">
+          <div class="label">Unique Shapes</div>
+          <div class="value">{{DB_UNIQUE_SHAPES}}</div>
+        </div>
+        <div class="db-mini-card">
+          <div class="label">Total DB Time</div>
+          <div class="value {{DB_TIME_CLASS}}">{{DB_TIME_MS}}ms</div>
+        </div>
+        <div class="db-mini-card">
+          <div class="label">Slow (&gt;100ms)</div>
+          <div class="value {{DB_SLOW_CLASS}}">{{DB_SLOW_COUNT}}</div>
+        </div>
+        <div class="db-mini-card">
+          <div class="label">N+1 Detected</div>
+          <div class="value {{DB_N1_CLASS}}">{{DB_N1_LABEL}}</div>
+        </div>
+        <div class="db-mini-card">
+          <div class="label">DB-Bound Ratio</div>
+          <div class="value {{DB_RATIO_CLASS}}">{{DB_BOUND_RATIO}}</div>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="db-controls">
+        <button class="db-filter-btn active" data-filter="all" onclick="filterQueries('all', this)">All</button>
+        <button class="db-filter-btn" data-filter="slow" onclick="filterQueries('slow', this)">Slow only (&gt;100ms)</button>
+        <button class="db-filter-btn" data-filter="nplus1" onclick="filterQueries('nplus1', this)">N+1 group</button>
+        <select class="db-sort-select" onchange="sortQueries(this.value)">
+          <option value="order">Sort: by order</option>
+          <option value="duration_desc">Sort: by duration ↓</option>
+          <option value="duration_asc">Sort: by duration ↑</option>
+          <option value="checkpoint">Sort: by checkpoint</option>
+        </select>
+        <input class="db-search-input" type="text" placeholder="Search SQL…" oninput="searchQueries(this.value)">
+      </div>
+
+      <!-- Timeline strip -->
+      <div class="query-timeline" id="query-timeline">
+        <!-- Injected by JS -->
+      </div>
+
+      <!-- Query table -->
+      <table class="query-table" id="query-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Duration</th>
+            <th>Checkpoint</th>
+            <th>SQL</th>
+            <th>Repeat</th>
+          </tr>
+        </thead>
+        <tbody id="query-tbody">
+          <!-- Injected by JS -->
+        </tbody>
+      </table>
+
+      <div class="no-issues" id="query-empty" style="display:none;">
+        <span class="icon">📭</span>No queries traced. Check that ORM SQL logging is enabled (see SKILL.md Phase 3).
+      </div>
     </div>
   </div>
 
@@ -506,6 +814,9 @@ function toggle(header) {
 const CHECKPOINTS = {{CHECKPOINTS_JSON}};
 const TIMING = {{TIMING_JSON}};
 const PERF_ISSUES = {{PERF_ISSUES_JSON}};
+const DB_QUERIES = {{DB_QUERIES_JSON}};
+const DB_SUMMARY = {{DB_SUMMARY_JSON}};
+const BUILD = {{BUILD_JSON}};
 
 // Render checkpoint timeline
 const timeline = document.getElementById('timeline');
@@ -585,6 +896,196 @@ function severityLabel(s) {
 }
 function escHtml(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// === DB Queries Rich Viewer ===
+
+const SQL_KEYWORDS = /\b(SELECT|FROM|WHERE|JOIN|LEFT|RIGHT|INNER|OUTER|ON|AS|AND|OR|NOT|IN|IS|NULL|INSERT|INTO|VALUES|UPDATE|SET|DELETE|GROUP|BY|ORDER|LIMIT|OFFSET|HAVING|UNION|DISTINCT|CASE|WHEN|THEN|ELSE|END|WITH|RETURNING|EXISTS|BETWEEN|LIKE|ILIKE)\b/gi;
+const SQL_FUNCTIONS = /\b(COUNT|SUM|AVG|MIN|MAX|COALESCE|CAST|CONVERT|NOW|CURRENT_TIMESTAMP|LOWER|UPPER|SUBSTRING|LENGTH|TRIM|CONCAT)\b/gi;
+const SQL_STRINGS = /'([^']*)'/g;
+const SQL_NUMBERS = /\b(\d+)\b/g;
+
+function highlightSQL(sql) {
+  let s = escHtml(sql);
+  s = s.replace(SQL_STRINGS, m => '<span class="sql-str">' + m + '</span>');
+  s = s.replace(SQL_KEYWORDS, m => '<span class="sql-kw">' + m + '</span>');
+  s = s.replace(SQL_FUNCTIONS, m => '<span class="sql-fn">' + m + '</span>');
+  s = s.replace(SQL_NUMBERS, m => '<span class="sql-num">' + m + '</span>');
+  return s;
+}
+
+function getCheckpointLabel(id) {
+  if (id == null) return '—';
+  const cp = CHECKPOINTS.find(c => c.id === id);
+  return cp ? '[' + cp.id + '] ' + cp.label : '#' + id;
+}
+
+// Build shape group → color index map (cycle 6 colors)
+const SHAPE_COLOR_MAP = {};
+(function buildShapeMap() {
+  const shapes = [...new Set(DB_QUERIES.map(q => q.shape_group).filter(Boolean))];
+  const counts = {};
+  shapes.forEach(s => counts[s] = DB_QUERIES.filter(q => q.shape_group === s).length);
+  shapes.sort((a, b) => counts[b] - counts[a]);
+  shapes.forEach((s, i) => { SHAPE_COLOR_MAP[s] = i % 6; });
+})();
+
+function rowClass(q) {
+  const cls = ['query-row'];
+  if (q.is_slow) cls.push('slow');
+  if (q.duration_ms && q.duration_ms > 500) cls.push('critical');
+  if (q.shape_group && SHAPE_COLOR_MAP[q.shape_group] != null) {
+    cls.push('shape-color-' + SHAPE_COLOR_MAP[q.shape_group]);
+  }
+  return cls.join(' ');
+}
+
+function barClass(q) {
+  if (q.duration_ms && q.duration_ms > 500) return 'query-bar critical';
+  if (q.is_slow) return 'query-bar slow';
+  return 'query-bar';
+}
+
+let currentQueries = DB_QUERIES.slice();
+let currentFilter = 'all';
+let currentSearch = '';
+
+function renderTimeline(queries) {
+  const tl = document.getElementById('query-timeline');
+  if (!queries.length) { tl.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:8px;">No queries</div>'; return; }
+  const maxMs = Math.max(...queries.map(q => q.duration_ms || 1), 1);
+  tl.innerHTML = queries.map(q => {
+    const w = Math.max(4, Math.round(((q.duration_ms || 1) / maxMs) * 60));
+    const tip = '#' + q.index + ' · ' + (q.duration_ms != null ? q.duration_ms + 'ms' : 'n/a') + ' · ' + (q.sql_raw || q.sql || '').slice(0, 100);
+    return '<div class="' + barClass(q) + '" style="width:' + w + 'px;" title="' + escHtml(tip) + '" onclick="scrollToQuery(' + q.index + ')"></div>';
+  }).join('');
+}
+
+function renderQueryTable(queries) {
+  const tbody = document.getElementById('query-tbody');
+  const empty = document.getElementById('query-empty');
+  if (!queries.length) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  tbody.innerHTML = queries.map(q => {
+    const shapeCount = q.shape_group ? DB_QUERIES.filter(x => x.shape_group === q.shape_group).length : 1;
+    const sqlPreview = (q.sql_raw || q.sql || '').replace(/\s+/g, ' ').slice(0, 120);
+    return '<tr class="' + rowClass(q) + '" data-idx="' + q.index + '" onclick="toggleQueryRow(' + q.index + ')">' +
+      '<td>' + q.index + '</td>' +
+      '<td>' + (q.duration_ms != null ? q.duration_ms + 'ms' : '—') + '</td>' +
+      '<td>' + escHtml(getCheckpointLabel(q.checkpoint_id)) + '</td>' +
+      '<td><div class="sql-preview">' + highlightSQL(sqlPreview) + '</div></td>' +
+      '<td>' + (shapeCount > 1 ? '×' + shapeCount : '') + '</td>' +
+      '</tr>';
+  }).join('');
+}
+
+function toggleQueryRow(idx) {
+  const row = document.querySelector('.query-row[data-idx="' + idx + '"]');
+  if (!row) return;
+  const next = row.nextElementSibling;
+  if (next && next.classList.contains('query-detail-row')) {
+    next.remove();
+    row.classList.remove('expanded');
+    return;
+  }
+  const q = DB_QUERIES.find(x => x.index === idx);
+  if (!q) return;
+  row.classList.add('expanded');
+  const detail = document.createElement('tr');
+  detail.className = 'query-detail-row';
+  detail.innerHTML = '<td colspan="5">' +
+    '<div class="detail-grid">' +
+    '<div class="k">Duration</div><div class="v">' + (q.duration_ms != null ? q.duration_ms + ' ms' : 'not reported') + '</div>' +
+    '<div class="k">Timestamp</div><div class="v">' + escHtml(q.timestamp || '—') + '</div>' +
+    '<div class="k">Checkpoint</div><div class="v">' + escHtml(getCheckpointLabel(q.checkpoint_id)) + '</div>' +
+    '<div class="k">Shape Group</div><div class="v">' + escHtml(q.shape_group || '—') + '</div>' +
+    '<div class="k">Params</div><div class="v">' + escHtml(q.params || '—') + '</div>' +
+    '</div>' +
+    '<div style="font-size:11px;color:var(--text-muted);margin-top:10px;">Full SQL</div>' +
+    '<div class="full-sql">' + highlightSQL(q.sql_raw || q.sql || '') + '</div>' +
+    '<button class="copy-sql-btn" onclick="copySQL(' + idx + ', this)">📋 Copy SQL</button>' +
+    '</td>';
+  row.parentNode.insertBefore(detail, row.nextSibling);
+}
+
+function copySQL(idx, btn) {
+  const q = DB_QUERIES.find(x => x.index === idx);
+  if (!q) return;
+  const text = q.sql_raw || q.sql || '';
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => {
+      btn.textContent = '✓ Copied';
+      setTimeout(() => { btn.textContent = '📋 Copy SQL'; }, 1500);
+    });
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); btn.textContent = '✓ Copied'; setTimeout(() => { btn.textContent = '📋 Copy SQL'; }, 1500); } catch (e) {}
+    document.body.removeChild(ta);
+  }
+}
+
+function scrollToQuery(idx) {
+  const row = document.querySelector('.query-row[data-idx="' + idx + '"]');
+  if (!row) return;
+  row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  row.classList.add('expanded');
+  setTimeout(() => row.classList.remove('expanded'), 1200);
+}
+
+function applyFiltersAndRender() {
+  let qs = DB_QUERIES.slice();
+  if (currentFilter === 'slow') qs = qs.filter(q => q.is_slow);
+  else if (currentFilter === 'nplus1') {
+    const n1 = DB_SUMMARY && DB_SUMMARY.n_plus_one_shape_group;
+    if (n1) qs = qs.filter(q => q.shape_group === n1);
+    else qs = qs.filter(q => {
+      const cnt = DB_QUERIES.filter(x => x.shape_group === q.shape_group).length;
+      return cnt >= 5;
+    });
+  }
+  if (currentSearch) {
+    const needle = currentSearch.toLowerCase();
+    qs = qs.filter(q => (q.sql_raw || q.sql || '').toLowerCase().includes(needle));
+  }
+  currentQueries = qs;
+  renderQueryTable(qs);
+  renderTimeline(qs);
+}
+
+function filterQueries(mode, btn) {
+  currentFilter = mode;
+  document.querySelectorAll('.db-filter-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  applyFiltersAndRender();
+}
+
+function sortQueries(mode) {
+  if (mode === 'duration_desc') DB_QUERIES.sort((a, b) => (b.duration_ms || 0) - (a.duration_ms || 0));
+  else if (mode === 'duration_asc') DB_QUERIES.sort((a, b) => (a.duration_ms || 0) - (b.duration_ms || 0));
+  else if (mode === 'checkpoint') DB_QUERIES.sort((a, b) => (a.checkpoint_id || 99) - (b.checkpoint_id || 99));
+  else DB_QUERIES.sort((a, b) => a.index - b.index);
+  applyFiltersAndRender();
+}
+
+function searchQueries(value) {
+  currentSearch = value;
+  applyFiltersAndRender();
+}
+
+// Initial render
+if (DB_QUERIES && DB_QUERIES.length) {
+  renderTimeline(DB_QUERIES);
+  renderQueryTable(DB_QUERIES);
+} else {
+  const empty = document.getElementById('query-empty');
+  if (empty) empty.style.display = 'block';
 }
 
 // Syntax-highlight JSON in response body

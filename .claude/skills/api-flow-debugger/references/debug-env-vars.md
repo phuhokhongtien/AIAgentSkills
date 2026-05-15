@@ -231,6 +231,86 @@ What it shows: SQL queries, params (filtered), render times, response codes.
 
 ---
 
+## ORM SQL Logging
+
+Skill always enables ORM-level SQL logging in Phase 3 when starting the server. Append these env vars to the start command in addition to the framework-level debug flags above.
+
+### EF Core (.NET)
+
+```bash
+ASPNETCORE_LOGGING__LOGLEVEL__MICROSOFT_ENTITYFRAMEWORKCORE_DATABASE_COMMAND=Information dotnet run
+```
+
+Emits every SQL command, parameters, and execution time. Compose with the ASP.NET Core debug vars above for full coverage.
+
+### SQLAlchemy (Python — FastAPI / Flask)
+
+```bash
+SQLALCHEMY_ECHO=true uvicorn main:app
+```
+
+Most app templates read `SQLALCHEMY_ECHO` and pass to `create_engine(echo=...)`. If the app does NOT read this env var (custom config loader), fall back to `PYTHONASYNCIODEBUG=1` for async info or attach a debugger.
+
+### TypeORM (Node.js)
+
+```bash
+TYPEORM_LOGGING=all TYPEORM_LOGGER=advanced-console node dist/main.js
+```
+
+Works when the app uses `new DataSource(...)` with config from environment. Pre-NestJS-9 setups may ignore these.
+
+### Prisma (Node.js)
+
+```bash
+DEBUG=prisma:query node dist/main.js
+```
+
+Emits each query with bind parameters and duration.
+
+### Hibernate (Java / Spring Boot)
+
+```bash
+java -jar app.jar \
+  --logging.level.org.hibernate.SQL=DEBUG \
+  --logging.level.org.hibernate.type.descriptor.sql=TRACE
+```
+
+`SQL=DEBUG` logs the statement; `descriptor.sql=TRACE` adds bind parameter values.
+
+### Mongoose (MongoDB, Node.js)
+
+No env-var-only switch — see Limitations below.
+
+### Rails ActiveRecord (Ruby)
+
+```bash
+RAILS_LOG_LEVEL=debug rails server
+```
+
+Already verbose at DEBUG — no extra var needed. SQL appears as `User Load (0.5ms) SELECT ...`.
+
+---
+
+### Limitations — Stacks Requiring Source-Code Changes
+
+Some ORMs cannot enable SQL logging via env vars alone. The skill respects "no source code modification" and documents the limitation rather than silently editing project files.
+
+| ORM / Stack | Why env-var-only fails | Workaround (no code change) |
+|---|---|---|
+| GORM (Go) | Logging is configured per-DB-connection via `db.Debug()` or `Logger.LogMode(logger.Info)` in code | (a) Use `dlv debug` and set breakpoints on query methods; (b) Enable DB-side logging — Postgres: `ALTER SYSTEM SET log_statement = 'all'; SELECT pg_reload_conf();`; MySQL: `SET GLOBAL general_log = 'ON'; SET GLOBAL general_log_file = '/tmp/mysql.log';` |
+| Django ORM | Requires a `LOGGING` dict entry in `settings.py` configuring the `django.db.backends` logger at `DEBUG` | (a) Set `DJANGO_SETTINGS_MODULE` to a separate settings file with logging enabled (out of scope for this skill); (b) DB-side logging as above |
+| Sequelize (Node.js, no env-driven config) | The `logging` option must be a function passed to `new Sequelize(...)`. Most templates hard-code `logging: false` | (a) Check if app reads `SEQUELIZE_LOGGING` (project-specific convention); (b) DB-side logging |
+| Laravel (default) | `DB::enableQueryLog()` must be called in code or middleware. Most apps don't | (a) Use Laravel Telescope if installed (`php artisan telescope:install`); (b) DB-side logging |
+| Mongoose | `mongoose.set('debug', true)` is a code call | (a) MongoDB profiler: `db.setProfilingLevel(2)` inside `mongosh`; (b) Attach `node --inspect` and break on `Model.prototype.exec` |
+| Knex.js (no event listener) | Logging requires `knex.on('query', ...)` listener in code | DB-side logging |
+
+When the skill detects one of these stacks, it should:
+1. Print a one-line warning: `SQL logging cannot be enabled via env vars for <stack>. DB query trace will be empty unless DB-side logging is active.`
+2. Suggest the appropriate workaround from the table.
+3. Continue execution — the trace will still capture HTTP and checkpoint data, just without per-query analysis.
+
+---
+
 ## Framework Version Detection
 
 ```bash

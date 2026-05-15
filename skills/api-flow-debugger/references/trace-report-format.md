@@ -33,6 +33,23 @@ Runtime:    .NET 8.0.1
 Entry:      Program.cs
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ BUILD STATUS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Status:     ✅ Passed
+Command:    dotnet build --no-restore
+Duration:   4823ms
+
+(If failed:)
+Status:     ❌ Failed (user chose: abort)
+Command:    dotnet build --no-restore
+Duration:   2104ms
+Error:      error CS0103: The name 'foo' does not exist in current context
+Output tail:
+  ...
+  Services/UserService.cs(89,12): error CS0103: The name 'foo' does not exist...
+  Build FAILED.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  CHECKPOINT TRACE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ✅ [1]  Router matched
@@ -78,6 +95,26 @@ TCP Connect:    4ms
 TTFB:           1843ms   ← server processing time
 Total:          1847ms
 Download size:  312 bytes
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ DB QUERIES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Total queries:    21
+Unique shapes:    2
+Total DB time:    1532ms
+Slow (>100ms):    0
+N+1 detected:     YES (shape a3f9b2c1, 20 occurrences)
+DB-bound ratio:   83%
+
+Top queries by duration:
+  #  Duration  Checkpoint              SQL (preview)
+  ─  ────────  ──────────────────────  ──────────────────────────────────────────────
+  1  142ms     [5] UserRepository.Get  SELECT u.Id, u.Name, u.Email FROM Users AS u
+  2  68ms      [5] UserRepository.Ord  SELECT * FROM Orders WHERE UserId = ?
+  3  67ms      [5] UserRepository.Ord  SELECT * FROM Orders WHERE UserId = ?
+  4  65ms      [5] UserRepository.Ord  SELECT * FROM Orders WHERE UserId = ?
+  ...
+  (16 more queries with same shape — N+1 confirmed)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  PERFORMANCE ISSUES
