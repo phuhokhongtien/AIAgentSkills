@@ -25,6 +25,26 @@ Debug any API endpoint by tracing the full request flow — from curl to respons
 - **Precise log parsing**: ANSI-stripping pre-processor → canonical clean log; anchored per-framework patterns replace naive `grep SELECT|INSERT` (eliminates false positives from stack traces and JSON request bodies); ripgrep multiline for multi-line query blocks
 - **Rich DB Queries dashboard**: interactive table with expandable rows, CSS-only SQL syntax highlight, filter (All / Slow / N+1), sort, search, copy-SQL button, timeline strip, N+1 shape-group color coding
 
+### `testing-explorer` — v0.1.0
+
+A **Test Explorer that lives inside Claude Code's Preview panel**. Discovers the test tree, runs tests, classifies failures with a root cause, and collects coverage automatically — solving the problem that test projects are otherwise invisible in Claude Code and can't be run/checked at a glance.
+
+**When to use:**
+- You want to *see* your test tree (project → suite → test) inside Claude Code
+- Run all tests, or **re-run only the failed ones**
+- Understand **why** a test failed (assertion / exception / timeout / setup / Playwright selector) with the exact `file:line`
+- Get **code coverage** with zero setup
+
+**Supported stacks:** **.NET** (xUnit / NUnit / MSTest via `dotnet test`) and **Playwright** (`npx playwright test`)
+
+**Highlights:**
+- **Renders in the Preview panel** via `.claude/launch.json` + the Claude Preview MCP — not an external browser
+- **Modes**: discovery (list only, no execution), full run, re-run-failed
+- **Automatic .NET coverage** — uses `coverlet.collector` if present, otherwise auto-provisions a repo-local `dotnet-coverage` tool (no prompt, never global); parses Cobertura into overall + per-file bars
+- **Playwright coverage**: suggest-only — never modifies your project; shows N/A + how-to-enable when not configured
+- **Failure root-cause analysis**: classifies each failure and extracts the first user-code `file:line`
+- Interactive dashboard: collapsible tree (✅/❌/⏭/◌), filter All/Failed/Skipped, search, click-to-expand failure detail with expected/actual diff
+
 ### `agent-debate-team` — v0.1.0
 
 Assemble a **team of specialized agents** that independently propose, then
@@ -194,11 +214,24 @@ AIAgentSkills/
 │               ├── debate-protocol.md       ← rounds, loop-prevention, decision rules, dissent
 │               ├── roles.md                 ← role catalog + mandatory Blind-Spot Hunter
 │               └── state-management.md      ← session dir schema + rolling-summary rule
+│       └── testing-explorer/           ← deployed copy (auto-loaded by Claude Code)
+│           ├── SKILL.md                ← 7-phase workflow
+│           ├── assets/
+│           │   └── test-report-template.html  ← dashboard shown in Preview panel
+│           └── references/
+│               ├── dotnet-test.md       ← discovery/run/rerun + TRX parsing
+│               ├── playwright-test.md   ← list/JSON reporter/--last-failed
+│               ├── result-parsing.md    ← unified model + failure classification
+│               ├── coverage.md          ← coverlet/dotnet-coverage auto-provision
+│               └── preview-panel.md     ← launch.json + preview_* orchestration
 ├── skills/                            ← source-of-truth mirror of .claude/skills/
 │   ├── api-flow-debugger/
-│   └── agent-debate-team/
+│   ├── agent-debate-team/
+│   └── testing-explorer/
 ├── samples/
-│   └── dotnet-web-api-sample/         ← .NET 8 + EF Core + SQLite test project
+│   ├── dotnet-web-api-sample/         ← .NET 8 + EF Core + SQLite test project
+│   ├── dotnet-web-api-sample.Tests/   ← xUnit fixture for testing-explorer
+│   └── playwright-sample/             ← offline Playwright fixture for testing-explorer
 │       ├── Controllers/
 │       │   └── DebugTestController.cs ← 4 test endpoints
 │       ├── Services/DebugTestService.cs
@@ -232,6 +265,21 @@ AIAgentSkills/
 ---
 
 ## Release Notes
+
+### 2026-05-16 — `testing-explorer` v0.1.0 (initial release)
+
+- New skill: a Test Explorer rendered **inside Claude Code's Preview panel** (via `.claude/launch.json` + Claude Preview MCP), not an external browser
+- 7-phase workflow: detect stacks → discovery → build verify → run → parse/classify → render panel → re-run-failed
+- Stacks: **.NET** (`dotnet test`, TRX parsing) and **Playwright** (`--reporter=json`, `--last-failed`)
+- Modes: `discovery` (no execution), `full`, `rerun-failed` (merges results, live-reloads the panel)
+- **Automatic .NET coverage**: `coverlet.collector` if referenced, else repo-local `dotnet-coverage` auto-provision (no prompt, never `--global`); Cobertura parsed into overall + per-file bars
+- **Playwright coverage**: suggest-only; never edits the project — shows N/A + `how_to_enable`
+- Failure classification: assertion / exception / timeout / setup / selector / navigation, with first user-code `file:line` and a one-line likely cause
+- Interactive dashboard (dark theme matching `api-flow-debugger`): collapsible test tree, All/Failed/Skipped filter, search, expandable failure cards with expected/actual diff, coverage bars
+- References: `dotnet-test.md`, `playwright-test.md`, `result-parsing.md`, `coverage.md`, `preview-panel.md`
+- Sample fixtures: `samples/dotnet-web-api-sample.Tests` (xUnit — pass/fail/skip/theory, no coverlet to exercise auto-provision) and `samples/playwright-sample` (offline `setContent` specs with a passing + failing test)
+
+---
 
 ### 2026-05-16 — `agent-debate-team` v0.1.0 (initial release)
 
