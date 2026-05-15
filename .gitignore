@@ -32,6 +32,10 @@ pw-results.json
 samples/**/dotnet-tools.json
 samples/**/.config/dotnet-tools.json
 
+# agent-debate-team: runtime session state + generated reports
+.agent-team/
+agent-debate-report-*.html
+
 # Temporary debug logs from api-flow-debugger
 server-debug*.log
 server-debug.clean.log

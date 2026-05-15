@@ -45,6 +45,32 @@ A **Test Explorer that lives inside Claude Code's Preview panel**. Discovers the
 - **Failure root-cause analysis**: classifies each failure and extracts the first user-code `file:line`
 - Interactive dashboard: collapsible tree (✅/❌/⏭/◌), filter All/Failed/Skipped, search, click-to-expand failure detail with expected/actual diff
 
+### `agent-debate-team` — v0.1.0
+
+Assemble a **team of specialized agents** that independently propose, then
+**debate**, then converge on the best solution to a hard or open-ended problem —
+coordinated by a **Leader** (the main session) that keeps everyone on-goal,
+resolves conflicts, and produces a written decision plus an interactive HTML
+report.
+
+**When to use:**
+- A hard/ambiguous problem benefits from multiple competing perspectives
+- You want structured argument (proposer vs. devil's-advocate vs. domain expert) instead of a single take
+- You need a recorded decision with rationale, rejected alternatives, and dissent
+- You want guaranteed termination — **no infinite debate** — with live visibility into each round
+
+**Key properties:**
+- **Leader = main session**, team members = stateless one-shot subagents (no nested orchestration)
+- **Conceptual demos only** — design sketches / pseudo-code / trade-off analysis as evidence (no code execution)
+- **Loop-prevention gate** — hard round cap + convergence + stagnation + force-decision
+- **Live transparency** — per-round digest of candidate solutions, each agent's position, and cross-review
+- **Blind-Spot Hunter** — a mandatory default agent that surfaces unstated open questions, NFRs, missing docs, and downstream impacts
+- **Per-role model tiering** — `opus`/`sonnet`/`haiku` assigned by cognitive load, user-overridable
+- User chooses debate intensity (Lean / Balanced / Deep) at invocation
+
+Invoke with `/agent-debate-team` or natural phrases like *"build a team of
+agents to debate the best approach for X"*.
+
 ---
 
 ## Installation
@@ -168,17 +194,26 @@ AIAgentSkills/
 ├── .claude/
 │   ├── settings.json
 │   └── skills/
-│       └── api-flow-debugger/         ← deployed copy (auto-loaded by Claude Code)
-│           ├── SKILL.md               ← main workflow (Phases 1–6 + 2.5)
+│       ├── api-flow-debugger/         ← deployed copy (auto-loaded by Claude Code)
+│       │   ├── SKILL.md               ← main workflow (Phases 1–6 + 2.5)
+│       │   ├── assets/
+│       │   │   └── report-template.html
+│       │   └── references/
+│       │       ├── build-verification.md    ← per-stack build commands + error parsing
+│       │       ├── debug-env-vars.md        ← debug start commands + ORM SQL logging
+│       │       ├── flow-mapping-patterns.md ← grep patterns to find routes/handlers
+│       │       ├── log-parsing.md           ← ANSI strip, anchored regex, multiline
+│       │       ├── performance-analysis.md  ← N+1, structured extraction, bottlenecks
+│       │       └── trace-report-format.md  ← text fallback + scenario examples
+│       └── agent-debate-team/         ← deployed copy (auto-loaded by Claude Code)
+│           ├── SKILL.md               ← Leader workflow (Phases 1–7 + loop-prevention gate)
 │           ├── assets/
 │           │   └── report-template.html
 │           └── references/
-│               ├── build-verification.md    ← per-stack build commands + error parsing
-│               ├── debug-env-vars.md        ← debug start commands + ORM SQL logging
-│               ├── flow-mapping-patterns.md ← grep patterns to find routes/handlers
-│               ├── log-parsing.md           ← ANSI strip, anchored regex, multiline
-│               ├── performance-analysis.md  ← N+1, structured extraction, bottlenecks
-│               └── trace-report-format.md  ← text fallback + scenario examples
+│               ├── orchestration.md         ← Leader=main-thread, parallel spawn, model tiering
+│               ├── debate-protocol.md       ← rounds, loop-prevention, decision rules, dissent
+│               ├── roles.md                 ← role catalog + mandatory Blind-Spot Hunter
+│               └── state-management.md      ← session dir schema + rolling-summary rule
 │       └── testing-explorer/           ← deployed copy (auto-loaded by Claude Code)
 │           ├── SKILL.md                ← 7-phase workflow
 │           ├── assets/
@@ -191,6 +226,7 @@ AIAgentSkills/
 │               └── preview-panel.md     ← launch.json + preview_* orchestration
 ├── skills/                            ← source-of-truth mirror of .claude/skills/
 │   ├── api-flow-debugger/
+│   ├── agent-debate-team/
 │   └── testing-explorer/
 ├── samples/
 │   ├── dotnet-web-api-sample/         ← .NET 8 + EF Core + SQLite test project
@@ -242,6 +278,28 @@ AIAgentSkills/
 - Interactive dashboard (dark theme matching `api-flow-debugger`): collapsible test tree, All/Failed/Skipped filter, search, expandable failure cards with expected/actual diff, coverage bars
 - References: `dotnet-test.md`, `playwright-test.md`, `result-parsing.md`, `coverage.md`, `preview-panel.md`
 - Sample fixtures: `samples/dotnet-web-api-sample.Tests` (xUnit — pass/fail/skip/theory, no coverlet to exercise auto-provision) and `samples/playwright-sample` (offline `setContent` specs with a passing + failing test)
+
+---
+
+### 2026-05-16 — `agent-debate-team` v0.1.0 (initial release)
+
+**New skill: multi-agent structured debate with guaranteed termination**
+
+- **7-phase workflow**: intake & config → team design → Round 0 (parallel, independent proposals) → debate rounds → leader synthesis → HTML report → cleanup
+- **Leader = main session**: the orchestrating Claude session coordinates all agents; team members are stateless one-shot subagents with no nested delegation
+- **Blind-Spot Hunter** (mandatory default): surfaces unstated requirements, NFRs, missing docs, and downstream impacts before debate begins — outputs a ranked gap list, not a solution
+- **Loop-Prevention Gate**: hard round cap + convergence + stagnation + irreconcilable-conflict force-decision — guarantees termination on every run
+- **Per-role model tiering**: `opus` for Architect/Proposer and Devil's-Advocate; `sonnet` for Domain Expert, Pragmatist, Evaluator, Blind-Spot Hunter; `haiku` for mechanical formatting
+- **Evidence-weighted decision rules**: `evidence-weighted` / `criteria-weighted` / `leader-call` — user-selectable at invocation
+- **Live transparency digest**: per-round output of candidate solutions, each agent's position, cross-review results, and gate decision
+- **Debate presets**: Lean (2–3 agents, 2 rounds), Balanced (3–5, 3 rounds), Deep (4–6, 5 rounds)
+- **On-disk session state**: rolling summaries prevent context bloat; raw round returns persisted for audit
+- **Interactive HTML report**: GitHub Dark theme dashboard with team roster, gap list, debate timeline, conflict map, decision log, dissent log, and final solution — self-contained, re-openable at any time
+- **`agent-debate-report-*.html`** and **`.agent-team/`** added to `.gitignore` (runtime artifacts, not committed)
+
+Invoke with `/agent-debate-team <problem statement>` or natural phrases like *"build a team of agents to debate the best approach for X"*.
+
+---
 
 ### 2026-05-15 — `api-flow-debugger` v0.2.0
 
