@@ -1,0 +1,12 @@
+{
+  "name": "playwright-sample",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Demo Playwright fixture for the testing-explorer skill.",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0"
+  }
+}

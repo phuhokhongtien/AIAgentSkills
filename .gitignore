@@ -16,6 +16,22 @@ samples/**/BuildFailDemo/*.cs
 # Generated debug reports
 debug-report-*.html
 
+# testing-explorer generated artifacts
+# (generated report archives live under .report/ — do NOT add a broad
+#  test-report-*.html rule, it would ignore the skill's own
+#  assets/test-report-template.html)
+.claude/skills/testing-explorer/.report/
+skills/testing-explorer/.report/
+**/TestResults/
+**/coverage.cobertura.xml
+**/playwright-report/
+**/test-results/
+samples/playwright-sample/node_modules/
+pw-results.json
+# Sample fixtures ship WITHOUT coverage tooling so the skill exercises auto-provision
+samples/**/dotnet-tools.json
+samples/**/.config/dotnet-tools.json
+
 # Temporary debug logs from api-flow-debugger
 server-debug*.log
 server-debug.clean.log
