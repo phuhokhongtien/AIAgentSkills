@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent Debate Report</title>
+<style>
+  :root{
+    --bg:#0e1117; --panel:#161b22; --panel2:#1c2330; --border:#2d3340;
+    --txt:#e6edf3; --muted:#8b949e; --accent:#58a6ff; --good:#3fb950;
+    --warn:#d29922; --bad:#f85149; --opus:#bc8cff; --sonnet:#58a6ff; --haiku:#3fb950;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);
+    font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  .wrap{max-width:1100px;margin:0 auto;padding:32px 20px 80px}
+  h1{font-size:24px;margin:0 0 4px}
+  h2{font-size:17px;margin:34px 0 12px;border-bottom:1px solid var(--border);padding-bottom:6px}
+  h3{font-size:14px;margin:18px 0 8px;color:var(--accent)}
+  .sub{color:var(--muted);margin:0 0 22px}
+  .grid{display:grid;gap:14px}
+  .cards{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+  .card .k{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+  .card .v{font-size:20px;font-weight:600;margin-top:4px}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin:12px 0}
+  .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;vertical-align:middle}
+  .b-opus{background:rgba(188,140,255,.16);color:var(--opus)}
+  .b-sonnet{background:rgba(88,166,255,.16);color:var(--sonnet)}
+  .b-haiku{background:rgba(63,185,80,.16);color:var(--haiku)}
+  .b-stop{background:rgba(248,81,73,.16);color:var(--bad)}
+  .b-go{background:rgba(63,185,80,.16);color:var(--good)}
+  table{width:100%;border-collapse:collapse;margin:6px 0}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+  th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+  .pill{font-size:11px;padding:2px 7px;border-radius:6px;background:var(--panel2);color:var(--muted)}
+  .role{font-weight:600}
+  .timeline{border-left:2px solid var(--border);margin-left:8px;padding-left:18px}
+  .round{position:relative;margin:0 0 22px}
+  .round::before{content:"";position:absolute;left:-25px;top:4px;width:10px;height:10px;
+    border-radius:50%;background:var(--accent)}
+  .conflict{border-left:3px solid var(--warn);padding-left:10px;margin:8px 0}
+  .dissent{border-left:3px solid var(--bad);padding-left:10px;margin:8px 0}
+  .solution{border:1px solid var(--good);background:rgba(63,185,80,.06)}
+  pre{background:var(--panel2);border:1px solid var(--border);border-radius:8px;
+    padding:12px;overflow:auto;font-size:12.5px;white-space:pre-wrap}
+  code{background:var(--panel2);padding:1px 5px;border-radius:4px;font-size:12.5px}
+  .muted{color:var(--muted)}
+  details{margin:6px 0}
+  summary{cursor:pointer;color:var(--accent)}
+  footer{margin-top:50px;color:var(--muted);font-size:12px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 id="t-title">Agent Debate Report</h1>
+  <p class="sub" id="t-sub"></p>
+
+  <div class="grid cards" id="t-cards"></div>
+
+  <h2>Problem</h2>
+  <div class="panel" id="t-problem"></div>
+
+  <h2>Team Roster</h2>
+  <div class="panel"><table id="t-roster">
+    <thead><tr><th>Role</th><th>Model</th><th>Mission</th><th>Type</th></tr></thead>
+    <tbody></tbody></table></div>
+
+  <h2>Blind-Spot Gap List</h2>
+  <div class="panel" id="t-gaps"></div>
+
+  <h2>Debate Timeline</h2>
+  <div class="timeline" id="t-rounds"></div>
+
+  <h2>Conflict Map</h2>
+  <div class="panel" id="t-conflicts"></div>
+
+  <h2>Decision Log</h2>
+  <div class="panel" id="t-decisions"></div>
+
+  <h2>Dissent (recorded minority views)</h2>
+  <div class="panel" id="t-dissent"></div>
+
+  <h2>Final Solution</h2>
+  <div class="panel solution" id="t-solution"></div>
+
+  <footer id="t-footer"></footer>
+</div>
+
+<script id="report-data" type="application/json">
+{
+  "_preview": true,
+  "title": "Agent Debate Report — Preview",
+  "session": "example-session",
+  "generated_at": "2026-05-15T00:00:00Z",
+  "rounds_used": 2,
+  "max_rounds": 3,
+  "team_size": 3,
+  "decision_rule": "evidence-weighted",
+  "stop_reason": "convergence",
+  "problem": {
+    "goal": "Pick the best caching strategy for a read-heavy API endpoint.",
+    "constraints": ["Must work with existing Redis infra", "P99 < 50ms"],
+    "criteria": ["Cache hit rate > 90%", "Minimal memory footprint", "Ease of invalidation"],
+    "assumptions": ["Write rate < 5% of total traffic — deferred from Blind-Spot gap"]
+  },
+  "roster": [
+    {"name": "Architect", "model": "opus", "mission": "Propose the primary solution", "subagent_type": "Plan"},
+    {"name": "Devil's-Advocate", "model": "opus", "mission": "Find the failure mode in every proposal", "subagent_type": "general-purpose"},
+    {"name": "Pragmatist", "model": "sonnet", "mission": "Judge feasibility and delivery risk", "subagent_type": "general-purpose"},
+    {"name": "Blind-Spot Hunter", "model": "sonnet", "mission": "Surface unstated gaps and NFRs", "subagent_type": "Explore"}
+  ],
+  "gap_list": [
+    {"category": "NFR", "gap": "Cache invalidation strategy not specified", "why": "Stale data risk depends entirely on write patterns", "assumption": "Write rate < 5% of traffic; TTL of 60s is acceptable"},
+    {"category": "Open question", "gap": "Is data user-scoped or global?", "why": "Determines whether per-user keys or a shared cache is appropriate", "question": "Does the endpoint return user-specific data?"}
+  ],
+  "rounds": [
+    {
+      "n": 0,
+      "candidates": ["Redis TTL cache (Architect)", "Cache-aside with versioned keys (Pragmatist)"],
+      "positions": [
+        {"role": "Architect", "position": "Redis TTL cache — simple, fast, proven. Set TTL=60s.", "change": "initial"},
+        {"role": "Devil's-Advocate", "position": "TTL is a blunt instrument — stale bursts on expiry and thundering-herd risk.", "change": "initial"},
+        {"role": "Pragmatist", "position": "Cache-aside with versioned keys — explicit invalidation, no TTL races.", "change": "initial"}
+      ],
+      "cross_review": [
+        {"from": "Devil's-Advocate", "to": "Architect", "note": "TTL=60s causes thundering-herd on popular endpoints"},
+        {"from": "Architect", "to": "Pragmatist", "note": "Versioned keys complicate invalidation logic significantly"}
+      ],
+      "whats_new": "Two distinct approaches surfaced; thundering-herd is the key conflict",
+      "gate": {"decision": "continue → round 1"}
+    },
+    {
+      "n": 1,
+      "candidates": ["Redis TTL + probabilistic early expiry (Architect)", "Cache-aside with versioned keys (Pragmatist)"],
+      "positions": [
+        {"role": "Architect", "position": "Revised: add probabilistic early expiry to beat thundering-herd.", "change": "new evidence"},
+        {"role": "Devil's-Advocate", "position": "Probabilistic early expiry addresses the concern. Concede on thundering-herd.", "change": "conceded"},
+        {"role": "Pragmatist", "position": "Versioned keys still wins on invalidation clarity — but complexity cost is real.", "change": "revised"}
+      ],
+      "cross_review": [
+        {"from": "Pragmatist", "to": "Architect", "note": "PEX adds operational complexity; team must understand the algorithm"}
+      ],
+      "whats_new": "Devil's-Advocate conceded; debate narrowed to TTL+PEX vs versioned-keys",
+      "gate": {"decision": "STOP — convergence (Devil's-Advocate conceded; remaining gap is implementation preference)"}
+    }
+  ],
+  "conflicts": [
+    {"id": "C1", "text": "Thundering-herd on TTL expiry", "resolution": "Resolved R1 — Architect adopted probabilistic early expiry; Devil's-Advocate conceded"},
+    {"id": "C2", "text": "Invalidation complexity of versioned keys vs. TTL", "resolution": "Leader ruling: TTL+PEX wins on operational simplicity given team's Redis expertise"}
+  ],
+  "decisions": [
+    {"when": "2026-05-15T00:01:00Z", "round": 1, "rule": "evidence-weighted", "winner": "Redis TTL + probabilistic early expiry", "rejected": ["Cache-aside with versioned keys"], "rationale": "Higher evidence quality: thundering-herd addressed; team already operates Redis TTL caches; versioned-key invalidation adds unquantified complexity."}
+  ],
+  "dissent": [
+    {"role": "Pragmatist", "round": 1, "position": "Cache-aside with versioned keys preferred for invalidation clarity", "why": "Leader judged implementation simplicity outweighs invalidation rigour given current team size", "revisit_if": "Write rate exceeds 20% or cache-staleness incidents are reported in production"}
+  ],
+  "solution": {
+    "headline": "Redis TTL cache with probabilistic early expiry (PEX)",
+    "summary": "Apply a 60s TTL on all read-heavy endpoint responses. Use probabilistic early expiry (PEX / XFetch algorithm) to prevent thundering-herd on popular keys. Store per-endpoint cache keys; invalidate explicitly only on write events.",
+    "detail": "Key schema: cache:<endpoint>:<params-hash>\nTTL: 60s\nPEX beta: 1.0 (tune empirically)\nInvalidation: pub/sub event on write → DEL matching keys\nMonitoring: cache hit rate (target >90%), PEX early-fetch rate",
+    "evidence": [
+      "Devil's-Advocate conceded thundering-herd objection after PEX was added (Round 1)",
+      "Pragmatist confirmed team already runs Redis TTL caches — no new infra",
+      "P99 <50ms feasible: Redis GET < 1ms + PEX overhead negligible"
+    ],
+    "rejected": ["Cache-aside with versioned keys"]
+  }
+}
+</script>
+<script>
+(function(){
+  function esc(s){return String(s==null?"":s)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+  function mb(m){var c={opus:"b-opus",sonnet:"b-sonnet",haiku:"b-haiku"}[m]||"pill";
+    return '<span class="badge '+c+'">'+esc(m||"?")+'</span>';}
+  var D;
+  try{D=JSON.parse(document.getElementById('report-data').textContent);}
+  catch(e){document.body.innerHTML='<div class="wrap"><h1>Report data error</h1><pre>'
+    +esc(e)+'</pre></div>';return;}
+
+  D=D||{};
+  document.getElementById('t-title').textContent=D.title||"Agent Debate Report";
+  document.getElementById('t-sub').textContent=
+    (D.generated_at||"")+(D.session?(" · session: "+D.session):"");
+
+  var cards=[
+    ["Rounds used",(D.rounds_used!=null?D.rounds_used:"?")+" / "+(D.max_rounds!=null?D.max_rounds:"?")],
+    ["Team size",D.team_size!=null?D.team_size:"?"],
+    ["Decision rule",D.decision_rule||"?"],
+    ["Stop reason",D.stop_reason||"?"]
+  ];
+  document.getElementById('t-cards').innerHTML=cards.map(function(c){
+    return '<div class="card"><div class="k">'+esc(c[0])+
+      '</div><div class="v">'+esc(c[1])+'</div></div>';}).join("");
+
+  var p=D.problem||{};
+  document.getElementById('t-problem').innerHTML=
+    '<p><b>Goal:</b> '+esc(p.goal||"—")+'</p>'+
+    '<p><b>Constraints:</b></p><ul>'+(p.constraints||[]).map(function(x){
+      return '<li>'+esc(x)+'</li>';}).join("")+'</ul>'+
+    '<p><b>Success criteria:</b></p><ol>'+(p.criteria||[]).map(function(x){
+      return '<li>'+esc(x)+'</li>';}).join("")+'</ol>'+
+    (p.assumptions&&p.assumptions.length?
+      '<p><b>Assumptions:</b></p><ul>'+p.assumptions.map(function(x){
+      return '<li>'+esc(x)+'</li>';}).join("")+'</ul>':'');
+
+  var rb=document.querySelector('#t-roster tbody');
+  rb.innerHTML=(D.roster||[]).map(function(r){
+    return '<tr><td class="role">'+esc(r.name)+'</td><td>'+mb(r.model)+
+      '</td><td>'+esc(r.mission||"")+'</td><td><span class="pill">'+
+      esc(r.subagent_type||"")+'</span></td></tr>';}).join("");
+
+  document.getElementById('t-gaps').innerHTML=(D.gap_list&&D.gap_list.length)?
+    '<ol>'+D.gap_list.map(function(g){
+      return '<li><b>['+esc(g.category)+']</b> '+esc(g.gap)+
+        '<br><span class="muted">Why: '+esc(g.why)+'</span>'+
+        (g.question?'<br><span class="muted">Q to user: '+esc(g.question)+'</span>':'')+
+        (g.assumption?'<br><span class="muted">Assumed: '+esc(g.assumption)+'</span>':'')+
+        '</li>';}).join("")+'</ol>'
+    :'<p class="muted">No gaps recorded.</p>';
+
+  document.getElementById('t-rounds').innerHTML=(D.rounds||[]).map(function(rd){
+    var pos=(rd.positions||[]).map(function(x){
+      return '<tr><td class="role">'+esc(x.role)+'</td><td>'+esc(x.position)+
+        '</td><td><span class="pill">'+esc(x.change||"")+'</span></td></tr>';}).join("");
+    var rev=(rd.cross_review||[]).map(function(x){
+      return '<li><b>'+esc(x.from)+' → '+esc(x.to)+':</b> '+esc(x.note)+'</li>';}).join("");
+    var gate=rd.gate||{};
+    return '<div class="round"><h3>Round '+esc(rd.n)+
+      ' <span class="badge '+(gate.decision&&/stop/i.test(gate.decision)?'b-stop':'b-go')+
+      '">'+esc(gate.decision||"")+'</span></h3>'+
+      '<p class="muted">Candidates: '+esc((rd.candidates||[]).join(" · "))+'</p>'+
+      '<table><thead><tr><th>Role</th><th>Position</th><th>Change</th></tr></thead><tbody>'+
+      pos+'</tbody></table>'+
+      (rev?'<details><summary>Cross-review</summary><ul>'+rev+'</ul></details>':'')+
+      (rd.whats_new?'<p class="muted">What changed: '+esc(rd.whats_new)+'</p>':'')+
+      '</div>';}).join("");
+
+  document.getElementById('t-conflicts').innerHTML=(D.conflicts&&D.conflicts.length)?
+    D.conflicts.map(function(c){
+      return '<div class="conflict"><b>'+esc(c.id||"")+'</b> '+esc(c.text)+
+        '<br><span class="muted">Resolution: '+esc(c.resolution||"open")+'</span></div>';
+    }).join(""):'<p class="muted">No conflicts recorded.</p>';
+
+  document.getElementById('t-decisions').innerHTML=(D.decisions&&D.decisions.length)?
+    D.decisions.map(function(d){
+      return '<div class="panel" style="margin:8px 0"><b>'+esc(d.when)+
+        ' · round '+esc(d.round)+' · '+esc(d.rule)+'</b><br>'+
+        'Winner: '+esc(d.winner)+'<br>Rejected: '+esc((d.rejected||[]).join(", "))+
+        '<br><span class="muted">'+esc(d.rationale)+'</span></div>';
+    }).join(""):'<p class="muted">No rulings logged.</p>';
+
+  document.getElementById('t-dissent').innerHTML=(D.dissent&&D.dissent.length)?
+    D.dissent.map(function(x){
+      return '<div class="dissent"><b>'+esc(x.role)+'</b> (round '+esc(x.round)+
+        ')<br>Overruled: '+esc(x.position)+'<br><span class="muted">Why: '+
+        esc(x.why)+'</span><br><span class="muted">Revisit if: '+
+        esc(x.revisit_if)+'</span></div>';}).join("")
+    :'<p class="muted">No dissent — decision was unanimous or uncontested.</p>';
+
+  var s=D.solution||{};
+  document.getElementById('t-solution').innerHTML=
+    '<h3>'+esc(s.headline||"Recommended solution")+'</h3>'+
+    '<p>'+esc(s.summary||"")+'</p>'+
+    (s.detail?'<pre>'+esc(s.detail)+'</pre>':'')+
+    (s.evidence&&s.evidence.length?'<p><b>Key evidence:</b></p><ul>'+
+      s.evidence.map(function(e){return '<li>'+esc(e)+'</li>';}).join("")+'</ul>':'')+
+    (s.rejected&&s.rejected.length?'<p><b>Rejected alternatives:</b> '+
+      esc(s.rejected.join(", "))+'</p>':'');
+
+  document.getElementById('t-footer').textContent=
+    "Generated by the agent-debate-team skill"+
+    (D.generated_at?(" · "+D.generated_at):"");
+})();
+</script>
+</body>
+</html>
