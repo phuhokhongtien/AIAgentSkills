@@ -16,6 +16,10 @@ samples/**/BuildFailDemo/*.cs
 # Generated debug reports
 debug-report-*.html
 
+# agent-debate-team: runtime session state + generated reports
+.agent-team/
+agent-debate-report-*.html
+
 # Temporary debug logs from api-flow-debugger
 server-debug*.log
 server-debug.clean.log
