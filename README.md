@@ -97,6 +97,38 @@ report.
 Invoke with `/agent-debate-team` or natural phrases like *"build a team of
 agents to debate the best approach for X"*.
 
+### `skill-release` — v0.1.0
+
+Automates the **full 7-step release checklist** for any skill in this project — so no step is ever skipped.
+
+**When to use:**
+- You've created or updated a skill and want to publish it in one shot
+- You want to ensure `.skill` packaging, local deploy, README updates, commit, and push all happen without manual prompting
+
+**What it does:**
+- Packages `skills/<name>/` into `<name>.skill` (ZIP via Python — works on Windows where `Compress-Archive` rejects `.skill` extensions)
+- Deploys to `.claude/skills/<name>/`
+- Updates README: Skills section, Release Notes (prepends dated entry), Project Structure (adds directory tree)
+- Commits with the standard `feat(<name>): v<X.Y.Z> — <summary>` pattern
+- Pushes to `master`
+
+Invoke with `/skill-release` or *"release skill \<name\>"*, *"package and publish \<name\>"*.
+
+### `skill-to-local` — v0.1.0
+
+Syncs one or all skills from this project's `skills/` directory into the **global `~/.claude/skills/`** — making them available in any Claude Code session on this machine.
+
+**When to use:**
+- After releasing a skill, you want it available globally (not just in this project)
+- You want to install all skills at once after cloning this repo
+
+**What it does:**
+- Copies `skills/<name>/` → `~/.claude/skills/<name>/` (force-overwrites stale copies)
+- Verifies `SKILL.md` exists at destination
+- Supports single-skill or all-skills mode
+
+Invoke with `/skill-to-local` or *"sync \<name\> globally"*, *"install all skills globally"*, *"cài skill vào global"*.
+
 ---
 
 ## Installation
@@ -259,11 +291,17 @@ AIAgentSkills/
 │               ├── roles.md             ← Sentinel, Interface Definer, Wave Reviewer, Verifier, Archaeology, Implementer
 │               ├── execution-protocol.md ← dependency graph, interface-first parallelism, Impact Ripple, rollback
 │               └── state-management.md  ← session dir schema, all file formats, rolling-wave-summary rule
+│       ├── skill-release/              ← deployed copy (auto-loaded by Claude Code)
+│       │   └── SKILL.md               ← 6-phase release checklist automation
+│       └── skill-to-local/            ← deployed copy (auto-loaded by Claude Code)
+│           └── SKILL.md               ← 3-phase global skill sync
 ├── skills/                            ← source-of-truth mirror of .claude/skills/
 │   ├── api-flow-debugger/
 │   ├── agent-debate-team/
 │   ├── testing-explorer/
-│   └── agent-forge-team/
+│   ├── agent-forge-team/
+│   ├── skill-release/
+│   └── skill-to-local/
 ├── samples/
 │   ├── dotnet-web-api-sample/         ← .NET 8 + EF Core + SQLite test project
 │   ├── dotnet-web-api-sample.Tests/   ← xUnit fixture for testing-explorer
@@ -281,6 +319,8 @@ AIAgentSkills/
 ├── agent-debate-team.skill            ← distributable package (ZIP)
 ├── testing-explorer.skill             ← distributable package (ZIP)
 ├── agent-forge-team.skill             ← distributable package (ZIP)
+├── skill-release.skill                ← distributable package (ZIP)
+├── skill-to-local.skill               ← distributable package (ZIP)
 ├── CLAUDE.md                          ← release checklist + project conventions
 └── README.md
 ```
@@ -305,6 +345,14 @@ AIAgentSkills/
 ---
 
 ## Release Notes
+
+### 2026-05-17 — `skill-release` + `skill-to-local` v0.1.0 (initial release)
+- `skill-release`: automates the full 7-step release checklist (package → deploy → README × 3 → commit → push)
+- `skill-release`: Python-based ZIP packaging avoids Windows `Compress-Archive` `.skill` extension rejection
+- `skill-release`: updates all three README sections (Skills, Release Notes, Project Structure) in one pass
+- `skill-to-local`: syncs one or all skills from `skills/` to global `~/.claude/skills/` in a single command
+- `skill-to-local`: supports single-skill and all-skills modes; verifies destination after each copy
+- Both skills are self-contained (single SKILL.md, no references/ or assets/)
 
 ### 2026-05-17 — `agent-forge-team` v0.1.0 (initial release)
 
