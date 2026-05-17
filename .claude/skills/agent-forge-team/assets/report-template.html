@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent Forge Report</title>
+<style>
+  :root{
+    --bg:#0e1117; --panel:#161b22; --panel2:#1c2330; --border:#2d3340;
+    --txt:#e6edf3; --muted:#8b949e; --accent:#58a6ff; --good:#3fb950;
+    --warn:#d29922; --bad:#f85149; --opus:#bc8cff; --sonnet:#58a6ff; --haiku:#3fb950;
+    --w1:#f0883e; --w2:#58a6ff; --w3:#bc8cff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);
+    font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  .wrap{max-width:1160px;margin:0 auto;padding:32px 20px 80px}
+  h1{font-size:24px;margin:0 0 4px}
+  h2{font-size:17px;margin:34px 0 12px;border-bottom:1px solid var(--border);padding-bottom:6px}
+  h3{font-size:14px;margin:18px 0 8px;color:var(--accent)}
+  h4{font-size:13px;margin:12px 0 6px;color:var(--muted)}
+  .sub{color:var(--muted);margin:0 0 22px}
+  .grid{display:grid;gap:14px}
+  .cards{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+  .card .k{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.05em}
+  .card .v{font-size:20px;font-weight:600;margin-top:4px}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin:10px 0}
+  .panel-warn{border-color:var(--warn);background:rgba(210,153,34,.06)}
+  .panel-bad{border-color:var(--bad);background:rgba(248,81,73,.06)}
+  .panel-good{border-color:var(--good);background:rgba(63,185,80,.06)}
+  .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;vertical-align:middle}
+  .b-opus{background:rgba(188,140,255,.16);color:var(--opus)}
+  .b-sonnet{background:rgba(88,166,255,.16);color:var(--sonnet)}
+  .b-haiku{background:rgba(63,185,80,.16);color:var(--haiku)}
+  .b-pass{background:rgba(63,185,80,.16);color:var(--good)}
+  .b-fail{background:rgba(248,81,73,.16);color:var(--bad)}
+  .b-warn{background:rgba(210,153,34,.16);color:var(--warn)}
+  .b-w1{background:rgba(240,136,62,.16);color:var(--w1)}
+  .b-w2{background:rgba(88,166,255,.16);color:var(--w2)}
+  .b-w3{background:rgba(188,140,255,.16);color:var(--w3)}
+  table{width:100%;border-collapse:collapse;margin:6px 0}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top;font-size:13px}
+  th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+  .pill{font-size:11px;padding:2px 7px;border-radius:6px;background:var(--panel2);color:var(--muted)}
+  .role{font-weight:600}
+  details{margin:8px 0}
+  details[open] summary{margin-bottom:10px}
+  summary{cursor:pointer;color:var(--accent);user-select:none;list-style:none}
+  summary::before{content:"▶ ";font-size:10px}
+  details[open] summary::before{content:"▼ ";font-size:10px}
+  pre{background:var(--panel2);border:1px solid var(--border);border-radius:8px;
+    padding:12px;overflow:auto;font-size:12px;white-space:pre-wrap;margin:6px 0}
+  code{background:var(--panel2);padding:1px 5px;border-radius:4px;font-size:12px}
+  .impact-card{border-left:3px solid var(--accent);padding-left:12px;margin:8px 0}
+  .impact-critical{border-color:var(--bad)}
+  .impact-high{border-color:var(--warn)}
+  .impact-medium{border-color:var(--sonnet)}
+  .risk-card{padding:10px 12px;border-radius:8px;margin:8px 0;border:1px solid var(--border)}
+  .risk-critical{border-color:var(--bad);background:rgba(248,81,73,.06)}
+  .risk-high{border-color:var(--warn);background:rgba(210,153,34,.06)}
+  .risk-medium{border-color:var(--sonnet);background:rgba(88,166,255,.06)}
+  .risk-low{border-color:var(--border)}
+  .wave-block{border:1px solid var(--border);border-radius:10px;margin:12px 0;overflow:hidden}
+  .wave-header{padding:12px 16px;display:flex;align-items:center;gap:10px;background:var(--panel2)}
+  .wave-body{padding:14px 16px}
+  .muted{color:var(--muted)}
+  .tag{display:inline-block;font-size:11px;padding:1px 6px;border-radius:4px;
+    background:var(--panel2);color:var(--muted);margin:1px}
+  .done{color:var(--good)}
+  .partial{color:var(--warn)}
+  .blocked{color:var(--bad)}
+  footer{margin-top:50px;color:var(--muted);font-size:12px;text-align:center}
+  .nav{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--border);
+    padding:8px 0;z-index:10;display:flex;gap:16px;overflow-x:auto;font-size:12px}
+  .nav a{color:var(--muted);text-decoration:none;white-space:nowrap}
+  .nav a:hover{color:var(--accent)}
+  #top{scroll-margin-top:50px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <nav class="nav">
+    <a href="#s-overview">Overview</a>
+    <a href="#s-plan">Plan</a>
+    <a href="#s-roster">Team</a>
+    <a href="#s-interfaces">Interfaces</a>
+    <a href="#s-sentinel">Sentinel</a>
+    <a href="#s-waves">Waves</a>
+    <a href="#s-impacts">Impacts</a>
+    <a href="#s-drift">Drift</a>
+    <a href="#s-narrative">Narrative</a>
+    <a href="#s-delivery">Delivery</a>
+  </nav>
+
+  <h1 id="t-title">Agent Forge Report</h1>
+  <p class="sub" id="t-sub"></p>
+
+  <!-- Overview cards -->
+  <div class="grid cards" id="t-cards"></div>
+
+  <!-- Plan -->
+  <h2 id="s-overview">Plan Overview</h2>
+  <div class="panel" id="t-plan-overview"></div>
+
+  <h2 id="s-plan">Task List</h2>
+  <div class="panel"><table id="t-tasks">
+    <thead><tr><th>ID</th><th>Description</th><th>Wave</th><th>Role</th><th>Status</th></tr></thead>
+    <tbody></tbody>
+  </table></div>
+
+  <!-- Team roster -->
+  <h2 id="s-roster">Team Roster</h2>
+  <div class="panel"><table id="t-roster">
+    <thead><tr><th>Role</th><th>Type</th><th>Model</th><th>Wave</th><th>Mission</th><th>Tasks</th></tr></thead>
+    <tbody></tbody>
+  </table></div>
+
+  <!-- Interface contracts -->
+  <h2 id="s-interfaces">Interface Contracts</h2>
+  <p class="muted">Defined by Interface Definer before any implementation — single source of truth for all Implementers.</p>
+  <div id="t-interfaces"></div>
+
+  <!-- Sentinel report -->
+  <h2 id="s-sentinel">Sentinel Report</h2>
+  <p class="muted">Pre-execution risk analysis — findings shaped the interface contracts and plan.</p>
+  <div id="t-sentinel"></div>
+
+  <!-- Wave timeline -->
+  <h2 id="s-waves">Wave Timeline</h2>
+  <div id="t-waves"></div>
+
+  <!-- Impact registry -->
+  <h2 id="s-impacts">Impact Registry</h2>
+  <p class="muted">All cross-agent interface changes declared during execution.</p>
+  <div class="panel"><table id="t-impacts">
+    <thead><tr><th>#</th><th>Wave</th><th>Declared by</th><th>File</th><th>Change type</th><th>Summary</th><th>Affected tasks</th><th>Interface updated</th></tr></thead>
+    <tbody></tbody>
+  </table></div>
+
+  <!-- Plan drift -->
+  <h2 id="s-drift">Plan Drift Log</h2>
+  <p class="muted">Deviations, insertions, and deferrals from the original plan during execution.</p>
+  <div id="t-drift"></div>
+
+  <!-- Narrative -->
+  <h2 id="s-narrative">Executive Summary</h2>
+  <p class="muted">Written by the Archaeology Agent after all waves completed.</p>
+  <div class="panel" id="t-narrative"></div>
+
+  <!-- Delivery -->
+  <h2 id="s-delivery">Delivery Summary</h2>
+  <div id="t-delivery"></div>
+
+  <footer id="t-footer"></footer>
+</div>
+
+<script id="report-data" type="application/json">
+{
+  "_preview": true,
+  "title": "Agent Forge Report — Preview",
+  "session": "admin-dashboard",
+  "generated_at": "2026-05-17T12:00:00Z",
+  "plan_name": "Admin Dashboard — User Management & RBAC",
+  "tech_stack": "NestJS + PostgreSQL + Next.js 14",
+  "execution_mode": "parallel",
+  "gate_style": "auto",
+  "rollback_policy": "git-stash",
+  "waves_total": 3,
+  "tasks_total": 15,
+  "tasks_done": 14,
+  "tasks_partial": 1,
+  "tasks_blocked": 0,
+  "escalations": 1,
+  "plan": {
+    "constraints": ["Must not break existing Products module", "RBAC must use decorator-based approach"],
+    "criteria": ["All unit tests pass", "Admin dashboard renders at /admin", "Roles and permissions assignable via UI"],
+    "verification": {"build": "npm run build", "test": "npm test", "lint": "npm run lint"}
+  },
+  "tasks": [
+    {"id": "T1", "desc": "Design DB schema DDL", "wave": 1, "role": "data-layer", "status": "done"},
+    {"id": "T2", "desc": "User entity + TypeORM migration", "wave": 1, "role": "data-layer", "status": "done"},
+    {"id": "T3", "desc": "Role + Permission entities", "wave": 1, "role": "data-layer", "status": "done"},
+    {"id": "T3.5", "desc": "Setup Passport + JWT strategy (inserted by Sentinel)", "wave": 1, "role": "data-layer", "status": "done"},
+    {"id": "T4", "desc": "UserService", "wave": 2, "role": "backend-services", "status": "done"},
+    {"id": "T5", "desc": "RoleService + PermissionService", "wave": 2, "role": "backend-services", "status": "done"},
+    {"id": "T6", "desc": "RBAC Guard + @RequirePermission decorator", "wave": 2, "role": "backend-services", "status": "done"},
+    {"id": "T7", "desc": "UsersController", "wave": 2, "role": "backend-api", "status": "done"},
+    {"id": "T8", "desc": "RolesController", "wave": 2, "role": "backend-api", "status": "done"},
+    {"id": "T9", "desc": "Next.js API client (fetch wrapper)", "wave": 2, "role": "frontend-core", "status": "done"},
+    {"id": "T10", "desc": "UsersTable component", "wave": 2, "role": "frontend-core", "status": "done"},
+    {"id": "T11", "desc": "UserFormModal component", "wave": 2, "role": "frontend-core", "status": "done"},
+    {"id": "T12", "desc": "RoleManagement page", "wave": 2, "role": "frontend-admin", "status": "done"},
+    {"id": "T13", "desc": "PermissionMatrix component", "wave": 2, "role": "frontend-admin", "status": "partial"},
+    {"id": "T14", "desc": "Unit tests: UserService, RoleService", "wave": 2, "role": "tests", "status": "done"},
+    {"id": "T15", "desc": "E2E: admin dashboard happy path", "wave": 3, "role": "tests", "status": "done"}
+  ],
+  "roster": [
+    {"name": "Sentinel", "type": "Explore", "model": "sonnet", "wave": "Phase 3", "mission": "Surface NFRs, missing steps, security gaps before any code", "tasks": []},
+    {"name": "Interface Definer", "type": "general-purpose", "model": "sonnet", "wave": "Phase 4", "mission": "Define all contracts upfront", "tasks": []},
+    {"name": "data-layer", "type": "general-purpose", "model": "haiku", "wave": "1", "mission": "Schema, entities, migrations, JWT setup", "tasks": ["T1","T2","T3","T3.5"]},
+    {"name": "backend-services", "type": "general-purpose", "model": "haiku", "wave": "2", "mission": "UserService, RoleService, RBAC Guard", "tasks": ["T4","T5","T6"]},
+    {"name": "backend-api", "type": "general-purpose", "model": "haiku", "wave": "2", "mission": "REST controllers", "tasks": ["T7","T8"]},
+    {"name": "frontend-core", "type": "general-purpose", "model": "haiku", "wave": "2", "mission": "API client, UsersTable, UserFormModal", "tasks": ["T9","T10","T11"]},
+    {"name": "frontend-admin", "type": "general-purpose", "model": "haiku", "wave": "2", "mission": "RoleManagement, PermissionMatrix", "tasks": ["T12","T13"]},
+    {"name": "tests", "type": "general-purpose", "model": "sonnet", "wave": "2+3", "mission": "Unit tests and E2E", "tasks": ["T14","T15"]},
+    {"name": "Wave Reviewer", "type": "general-purpose", "model": "sonnet", "wave": "post-wave", "mission": "Semantic cross-check — consistency, contract conformance", "tasks": []},
+    {"name": "Integration Verifier", "type": "general-purpose", "model": "haiku", "wave": "post-wave", "mission": "Build, test, lint", "tasks": []},
+    {"name": "Archaeology Agent", "type": "general-purpose", "model": "sonnet", "wave": "Phase 6", "mission": "Delivery narrative", "tasks": []}
+  ],
+  "interfaces": [
+    {"file": "api-contracts.md", "summary": "7 REST endpoints (auth, users CRUD, roles CRUD) with auth, pagination, error codes"},
+    {"file": "service-interfaces.md", "summary": "IUserService (5 methods), IRoleService (4 methods), IPermissionService (2 methods)"},
+    {"file": "db-schema.md", "summary": "5 tables: users, roles, permissions, user_roles, role_permissions with full DDL"},
+    {"file": "component-contracts.md", "summary": "UsersTableProps, UserFormModalProps, RoleManagementProps, PermissionMatrixProps"}
+  ],
+  "sentinel": {
+    "risks": [
+      {"category": "SECURITY", "severity": "Critical", "risk": "RBAC Guard not covering HTTP PATCH/DELETE by default", "affected": ["T6","T7","T8"], "mitigation": "Apply guard at global app level, not per-controller"},
+      {"category": "SECURITY", "severity": "High", "risk": "PermissionMatrix exposes full permission list without server-side filtering", "affected": ["T8","T13"], "mitigation": "API returns only permissions for current user's roles"},
+      {"category": "PERFORMANCE", "severity": "High", "risk": "UserTable N+1 risk when joining roles without eager loading", "affected": ["T7","T10"], "mitigation": "Add cursor pagination + leftJoinAndSelect in query"},
+      {"category": "SECURITY", "severity": "Medium", "risk": "Password hashing not in plan", "affected": ["T2"], "mitigation": "Insert T1.5: configure bcrypt"}
+    ],
+    "missing": [
+      "T3.5: Passport + JWT strategy — inserted into Wave 1",
+      "T7.5: Global exception filter — inserted into Wave 2"
+    ],
+    "conflicts": ["T10 and T11 both in users/ directory → split: T10=UsersTable.tsx, T11=UserFormModal.tsx"]
+  },
+  "waves": [
+    {
+      "n": 1,
+      "label": "Data Foundation",
+      "tasks_done": ["T1","T2","T3","T3.5"],
+      "tasks_partial": [],
+      "tasks_blocked": [],
+      "files_changed": ["migrations/001_init.sql","src/users/user.entity.ts","src/roles/role.entity.ts","src/roles/permission.entity.ts","src/auth/jwt.strategy.ts"],
+      "critical_issues": [],
+      "escalations": [],
+      "reviewer": "PROCEED — all outputs consistent with db-schema.md",
+      "integration": {"build": "PASS", "tests": "12 passed, 0 failed", "lint": "PASS"},
+      "gate": "PROCEED"
+    },
+    {
+      "n": 2,
+      "label": "Parallel Implementation",
+      "tasks_done": ["T4","T5","T6","T7","T8","T9","T10","T11","T12","T14"],
+      "tasks_partial": ["T13"],
+      "tasks_blocked": [],
+      "files_changed": ["src/users/users.service.ts","src/roles/roles.service.ts","src/auth/rbac.guard.ts","src/users/users.controller.ts","src/roles/roles.controller.ts","src/app/api/client.ts","src/components/users/UsersTable.tsx","src/components/users/UserFormModal.tsx","src/admin/RoleManagement.tsx","src/admin/PermissionMatrix.tsx","src/users/users.service.spec.ts","src/roles/roles.service.spec.ts"],
+      "critical_issues": [{"severity":"High","issue":"IRoleService missing findByIds() — backend-services caught at runtime","resolution":"Leader patched on main thread + updated interfaces/service-interfaces.md"}],
+      "escalations": ["backend-services haiku → sonnet: RBAC Guard logic required security reasoning beyond brief"],
+      "reviewer": "CORRECT-AND-PROCEED — backend-api PATCH /users/:id returning raw entity instead of UserDto; Leader patched .toDto() transform",
+      "integration": {"build": "PASS", "tests": "47 passed, 2 failed (PermissionMatrix partial)", "lint": "PASS"},
+      "gate": "PROCEED (2 failing tests from T13 partial — acceptable, re-queued to Wave 3)"
+    },
+    {
+      "n": 3,
+      "label": "E2E + Completion",
+      "tasks_done": ["T15"],
+      "tasks_partial": [],
+      "tasks_blocked": [],
+      "files_changed": ["tests/admin-dashboard.e2e.spec.ts","src/admin/PermissionMatrix.tsx"],
+      "critical_issues": [],
+      "escalations": [],
+      "reviewer": "PROCEED",
+      "integration": {"build": "PASS", "tests": "52 passed, 0 failed", "lint": "PASS"},
+      "gate": "PROCEED — all tasks complete"
+    }
+  ],
+  "impacts": [
+    {"id":"IMP-001","wave":1,"role":"data-layer","file":"src/users/user.entity.ts","change_type":"schema-changed","summary":"User entity has deletedAt — all queries must filter deleted_at IS NULL or use @SoftDelete()","affected":["T4","T5"],"interface_updated":"yes"},
+    {"id":"IMP-002","wave":1,"role":"data-layer","file":"src/auth/jwt.strategy.ts","change_type":"interface-added","summary":"JWT strategy extracts userId from payload as req.user.id — RBAC Guard must read req.user.id","affected":["T6"],"interface_updated":"no"},
+    {"id":"IMP-003","wave":2,"role":"backend-services","file":"src/roles/roles.service.ts","change_type":"signature-changed","summary":"IRoleService gained findByIds(ids: string[]) — Leader patched this on main thread","affected":["T7","T8"],"interface_updated":"yes"}
+  ],
+  "drift": [
+    {"type":"insert","task":"T3.5","reason":"Sentinel found missing Passport/JWT setup — Guard cannot function without it"},
+    {"type":"insert","task":"T7.5","reason":"Sentinel found missing global exception filter"},
+    {"type":"escalation","task":"T6","reason":"RBAC Guard security reasoning exceeded haiku capability — escalated to sonnet"},
+    {"type":"correction","wave":2,"reason":"Wave Reviewer caught backend-api returning raw entity instead of UserDto — Leader patched on main thread"},
+    {"type":"partial","task":"T13","reason":"PermissionMatrix server-side filtering required API change not in scope — deferred to follow-up"}
+  ],
+  "narrative": "The team implemented a complete NestJS + Next.js admin dashboard for user and role management. The Interface Definer defined 7 REST endpoints and 3 service interfaces before any code was written, enabling 8 agents to work in parallel in Wave 2 — reducing what would have been 6 sequential waves to 3.\n\nThe key architectural decisions: soft-delete via deletedAt (not hard delete) to preserve audit history; RBAC applied globally at app level (not per-controller) per Sentinel's Critical finding; cursor-based pagination on all list endpoints to prevent N+1 queries.\n\nThe plan drifted in two meaningful ways: (1) Sentinel inserted Passport/JWT setup and a global exception filter that the plan omitted — these would have blocked Wave 2 entirely; (2) PermissionMatrix server-side filtering requires an API design decision about permission scoping that was not in scope for this run and was deferred.\n\nFuture maintainers: the RBAC Guard reads req.user.id set by JwtStrategy — any changes to the JWT payload structure will break all permission checks. The User entity's deletedAt field means no service should do a plain findAll() without filtering deleted records.",
+  "delivery": {
+    "built": ["User entity, Role entity, Permission entity with full TypeORM migrations","UserService (CRUD + role assignment)","RoleService + PermissionService","RBAC Guard with @RequirePermission decorator","UsersController, RolesController (7 REST endpoints)","Next.js API client + UsersTable + UserFormModal + RoleManagement","Unit tests (47 passing), E2E test (admin dashboard happy path)"],
+    "deferred": ["PermissionMatrix server-side filtering (T13 partial) — requires product decision on permission scoping"],
+    "risks": ["PermissionMatrix currently returns all permissions — restrict before production"],
+    "rollback": [
+      {"wave":1,"ref":"stash@{2}"},
+      {"wave":2,"ref":"stash@{1}"},
+      {"wave":3,"ref":"stash@{0}"}
+    ]
+  }
+}
+</script>
+
+<script>
+(function(){
+  function esc(s){return String(s==null?"":s)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+  function mb(m){var c={opus:"b-opus",sonnet:"b-sonnet",haiku:"b-haiku"}[m]||"pill";
+    return '<span class="badge '+c+'">'+esc(m||"?")+'</span>';}
+  function wb(w){var c=["","b-w1","b-w2","b-w3"][parseInt(w)]||"pill";
+    return '<span class="badge '+c+'">Wave '+esc(w)+'</span>';}
+  function sb(s){var c={done:"b-pass",partial:"b-warn",blocked:"b-fail"}[s]||"pill";
+    return '<span class="badge '+c+'">'+esc(s)+'</span>';}
+  function ib(p,f,l){
+    if(p==="PASS")return '<span class="badge b-pass">PASS</span> '+esc(f||"");
+    if(p==="FAIL")return '<span class="badge b-fail">FAIL</span> '+esc(f||"");
+    return '<span class="badge pill">'+esc(p||"N/A")+'</span>';}
+
+  var D;
+  try{D=JSON.parse(document.getElementById('report-data').textContent);}
+  catch(e){document.body.innerHTML='<div class="wrap"><h1>Report data error</h1><pre>'+esc(e)+'</pre></div>';return;}
+  D=D||{};
+
+  // Title + sub
+  document.getElementById('t-title').textContent=D.title||"Agent Forge Report";
+  document.getElementById('t-sub').textContent=
+    [D.generated_at, D.session?"session: "+D.session:"", D.tech_stack].filter(Boolean).join(" · ");
+
+  // Overview cards
+  var cards=[
+    ["Tasks",  (D.tasks_done||0)+" done / "+(D.tasks_total||"?")],
+    ["Waves",  (D.waves_total||"?")+" waves"],
+    ["Mode",   D.execution_mode||"—"],
+    ["Escalations", D.escalations!=null?D.escalations:"—"],
+    ["Gate style", D.gate_style||"—"],
+    ["Rollback", D.rollback_policy||"—"]
+  ];
+  document.getElementById('t-cards').innerHTML=cards.map(function(c){
+    return '<div class="card"><div class="k">'+esc(c[0])+
+      '</div><div class="v">'+esc(c[1])+'</div></div>';}).join("");
+
+  // Plan overview
+  var p=D.plan||{};
+  document.getElementById('t-plan-overview').innerHTML=
+    '<p><b>Plan:</b> '+esc(D.plan_name||"—")+'</p>'+
+    '<p><b>Tech stack:</b> '+esc(D.tech_stack||"—")+'</p>'+
+    (p.constraints&&p.constraints.length?
+      '<p><b>Constraints:</b></p><ul>'+p.constraints.map(function(x){return '<li>'+esc(x)+'</li>';}).join("")+'</ul>':'')+
+    (p.criteria&&p.criteria.length?
+      '<p><b>Success criteria:</b></p><ol>'+p.criteria.map(function(x){return '<li>'+esc(x)+'</li>';}).join("")+'</ol>':'')+
+    (p.verification?'<p><b>Verification:</b> <code>'+esc(p.verification.build||"")+'</code>'+
+      (p.verification.test?' · <code>'+esc(p.verification.test)+'</code>':'')+
+      (p.verification.lint?' · <code>'+esc(p.verification.lint)+'</code>':'')+
+      '</p>':'');
+
+  // Tasks table
+  var tb=document.querySelector('#t-tasks tbody');
+  tb.innerHTML=(D.tasks||[]).map(function(t){
+    return '<tr><td><code>'+esc(t.id)+'</code></td><td>'+esc(t.desc)+
+      (t.id&&t.id.includes('.')?'<span class="tag">sentinel-insert</span>':'')+
+      '</td><td>'+wb(t.wave)+'</td><td><span class="pill">'+esc(t.role)+'</span></td><td>'+
+      sb(t.status)+'</td></tr>';}).join("");
+
+  // Roster
+  var rb=document.querySelector('#t-roster tbody');
+  rb.innerHTML=(D.roster||[]).map(function(r){
+    return '<tr><td class="role">'+esc(r.name)+'</td>'+
+      '<td><span class="pill">'+esc(r.type||"")+'</span></td>'+
+      '<td>'+mb(r.model)+'</td>'+
+      '<td><span class="pill">'+esc(r.wave||"")+'</span></td>'+
+      '<td>'+esc(r.mission||"")+'</td>'+
+      '<td>'+((r.tasks||[]).map(function(t){return '<span class="tag">'+esc(t)+'</span>';}).join("")||'<span class="muted">—</span>')+
+      '</td></tr>';}).join("");
+
+  // Interface contracts
+  var iEl=document.getElementById('t-interfaces');
+  iEl.innerHTML=(D.interfaces&&D.interfaces.length)?
+    D.interfaces.map(function(f){
+      return '<div class="panel"><b>'+esc(f.file)+'</b><br><span class="muted">'+esc(f.summary)+'</span></div>';
+    }).join("")
+    :'<div class="panel"><span class="muted">No interface contracts recorded.</span></div>';
+
+  // Sentinel
+  var se=D.sentinel||{};
+  var sEl=document.getElementById('t-sentinel');
+  var sevClass={Critical:"impact-critical",High:"impact-high",Medium:"impact-medium"};
+  sEl.innerHTML=
+    (se.risks&&se.risks.length?
+      '<h3>Non-Functional Risks ('+se.risks.length+')</h3>'+
+      se.risks.map(function(r){
+        return '<div class="risk-card risk-'+r.severity+'">'+
+          '<b>['+esc(r.category)+'] <span class="badge b-'+(r.severity==="Critical"?"fail":r.severity==="High"?"warn":"sonnet")+'">'+esc(r.severity)+'</span></b> '+
+          esc(r.risk)+'<br>'+
+          '<span class="muted">Affected: '+(r.affected||[]).map(function(t){return '<code>'+esc(t)+'</code>';}).join(", ")+'</span><br>'+
+          '<span class="muted">Mitigation: '+esc(r.mitigation||"—")+'</span></div>';}).join("")
+      :'')+
+    (se.missing&&se.missing.length?
+      '<h3>Missing Plan Items (inserted)</h3><ul>'+
+      se.missing.map(function(m){return '<li>'+esc(m)+'</li>';}).join("")+'</ul>'
+      :'')+
+    (se.conflicts&&se.conflicts.length?
+      '<h3>File Conflict Predictions (resolved)</h3><ul>'+
+      se.conflicts.map(function(c){return '<li>'+esc(c)+'</li>';}).join("")+'</ul>'
+      :'');
+  if(!sEl.innerHTML)sEl.innerHTML='<span class="muted">No Sentinel report recorded.</span>';
+
+  // Waves
+  var wEl=document.getElementById('t-waves');
+  wEl.innerHTML=(D.waves||[]).map(function(w){
+    var intg=w.integration||{};
+    var issues=(w.critical_issues||[]);
+    var escs=(w.escalations||[]);
+    var allDone=(w.tasks_done||[]).concat(w.tasks_partial||[]).concat(w.tasks_blocked||[]);
+    return '<div class="wave-block">'+
+      '<div class="wave-header">'+
+      '<span class="badge b-w'+(w.n<=3?w.n:2)+'">Wave '+esc(w.n)+'</span>'+
+      '<b>'+esc(w.label||"")+'</b>'+
+      '<span class="muted" style="margin-left:auto">'+
+        esc((w.tasks_done||[]).length)+' done'+
+        (w.tasks_partial&&w.tasks_partial.length?' · <span class="partial">'+w.tasks_partial.length+' partial</span>':'')+
+        (w.tasks_blocked&&w.tasks_blocked.length?' · <span class="blocked">'+w.tasks_blocked.length+' blocked</span>':'')+
+      '</span>'+
+      '</div>'+
+      '<div class="wave-body">'+
+      '<details><summary>Tasks ('+allDone.length+')</summary>'+
+        '<ul>'+
+        (w.tasks_done||[]).map(function(t){return '<li class="done">✓ '+esc(t)+'</li>';}).join("")+
+        (w.tasks_partial||[]).map(function(t){return '<li class="partial">~ '+esc(t)+' (partial)</li>';}).join("")+
+        (w.tasks_blocked||[]).map(function(t){return '<li class="blocked">✗ '+esc(t)+' (blocked)</li>';}).join("")+
+        '</ul></details>'+
+      (w.files_changed&&w.files_changed.length?
+        '<details><summary>Files changed ('+w.files_changed.length+')</summary>'+
+        '<ul>'+w.files_changed.map(function(f){return '<li><code>'+esc(f)+'</code></li>';}).join("")+'</ul>'+
+        '</details>':'')+
+      (issues.length?
+        '<div style="margin:10px 0"><b>Critical issues found:</b>'+
+        issues.map(function(i){
+          return '<div class="impact-card '+(i.severity==="Critical"?"impact-critical":"impact-high")+'">'+
+            '<span class="badge b-'+(i.severity==="Critical"?"fail":"warn")+'">'+esc(i.severity)+'</span> '+
+            esc(i.issue)+'<br><span class="muted">Resolution: '+esc(i.resolution||"—")+'</span></div>';
+        }).join("")+'</div>':'')+
+      (escs.length?
+        '<div style="margin:10px 0"><b>Escalations:</b><ul>'+
+        escs.map(function(e){return '<li class="muted">'+esc(e)+'</li>';}).join("")+'</ul></div>':'')+
+      '<div style="margin:10px 0">'+
+        '<b>Wave Reviewer:</b> <span class="muted">'+esc(w.reviewer||"—")+'</span></div>'+
+      '<div><b>Integration:</b> '+
+        ib(intg.build)+" build · "+
+        '<span class="muted">'+esc(intg.tests||"—")+'</span> · lint '+
+        ib(intg.lint)+
+        '<br><span class="muted">Gate: '+esc(w.gate||"—")+'</span>'+
+      '</div>'+
+      '</div></div>';
+  }).join("");
+  if(!wEl.innerHTML)wEl.innerHTML='<div class="panel muted">No waves recorded.</div>';
+
+  // Impact registry
+  var impTb=document.querySelector('#t-impacts tbody');
+  impTb.innerHTML=(D.impacts||[]).map(function(im){
+    return '<tr><td><code>'+esc(im.id)+'</code></td>'+
+      '<td>'+wb(im.wave)+'</td>'+
+      '<td><span class="pill">'+esc(im.role)+'</span></td>'+
+      '<td><code style="font-size:11px">'+esc(im.file)+'</code></td>'+
+      '<td><span class="tag">'+esc(im.change_type)+'</span></td>'+
+      '<td>'+esc(im.summary||"—")+'</td>'+
+      '<td>'+(im.affected||[]).map(function(t){return '<code>'+esc(t)+'</code>';}).join(", ")+'</td>'+
+      '<td>'+(im.interface_updated==="yes"?'<span class="badge b-pass">yes</span>':'<span class="muted">no</span>')+'</td>'+
+      '</tr>';}).join("");
+  if(!(D.impacts&&D.impacts.length))
+    document.querySelector('#t-impacts tbody').innerHTML='<tr><td colspan="8" class="muted">No impacts recorded.</td></tr>';
+
+  // Plan drift
+  var dEl=document.getElementById('t-drift');
+  dEl.innerHTML=(D.drift&&D.drift.length)?
+    D.drift.map(function(d){
+      var tc={insert:"b-warn",escalation:"b-sonnet",correction:"b-sonnet",partial:"b-fail"}[d.type]||"pill";
+      return '<div class="panel"><span class="badge '+tc+'">'+esc(d.type)+'</span> '+
+        (d.task?'<code>'+esc(d.task)+'</code> ':'')+'<span class="muted">'+esc(d.reason||"")+'</span></div>';
+    }).join("")
+    :'<div class="panel muted">No plan drift recorded — execution matched the original plan.</div>';
+
+  // Narrative
+  document.getElementById('t-narrative').innerHTML=
+    esc(D.narrative||"No narrative recorded.").replace(/\n/g,"<br>");
+
+  // Delivery
+  var del=D.delivery||{};
+  var dlEl=document.getElementById('t-delivery');
+  dlEl.innerHTML=
+    (del.built&&del.built.length?
+      '<div class="panel panel-good"><h3>Built</h3><ul>'+
+      del.built.map(function(x){return '<li>'+esc(x)+'</li>';}).join("")+'</ul></div>':'')+
+    (del.deferred&&del.deferred.length?
+      '<div class="panel panel-warn"><h3>Deferred</h3><ul>'+
+      del.deferred.map(function(x){return '<li>'+esc(x)+'</li>';}).join("")+'</ul></div>':'')+
+    (del.risks&&del.risks.length?
+      '<div class="panel panel-bad"><h3>Open Risks</h3><ul>'+
+      del.risks.map(function(x){return '<li>'+esc(x)+'</li>';}).join("")+'</ul></div>':'')+
+    (del.rollback&&del.rollback.length?
+      '<div class="panel"><h3>Rollback Map</h3><table>'+
+      '<thead><tr><th>Wave</th><th>Snapshot ref</th></tr></thead><tbody>'+
+      del.rollback.map(function(r){
+        return '<tr><td>'+wb(r.wave)+'</td><td><code>'+esc(r.ref)+'</code></td></tr>';
+      }).join("")+'</tbody></table></div>':'');
+  if(!dlEl.innerHTML)dlEl.innerHTML='<div class="panel muted">No delivery summary recorded.</div>';
+
+  document.getElementById('t-footer').textContent=
+    "Generated by agent-forge-team skill"+(D.generated_at?" · "+D.generated_at:"");
+})();
+</script>
+</body>
+</html>

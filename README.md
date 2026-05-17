@@ -45,6 +45,32 @@ A **Test Explorer that lives inside Claude Code's Preview panel**. Discovers the
 - **Failure root-cause analysis**: classifies each failure and extracts the first user-code `file:line`
 - Interactive dashboard: collapsible tree (✅/❌/⏭/◌), filter All/Failed/Skipped, search, click-to-expand failure detail with expected/actual diff
 
+### `agent-forge-team` — v0.1.0
+
+Assemble a **crew of specialized agents** that **executes** a plan — writing real code, running
+real commands, and staying in sync through shared interface contracts and a structured impact
+system. Provide a plan (or just a goal) and the team builds it.
+
+**When to use:**
+- You have a plan (or a high-level goal) spanning multiple files, layers, or domains
+- You want agents to work in parallel, not one at a time
+- Non-functional requirements (security, pagination, auth) must not be forgotten before coding begins
+- You need a full audit trail: what was built, what drifted, what changed across agents, and how to roll back
+
+**Key properties:**
+- **Interface-first parallelism** — an Interface Definer locks all contracts (TypeScript interfaces, API shapes, DB schema, component props) upfront, collapsing what would be 7+ sequential waves into 3
+- **Sentinel** (mandatory pre-execution) — surfaces security gaps, missing steps, file conflicts, and NFRs *before* any code is written; its findings shape the interface contracts
+- **Wave Reviewer** — after each wave, a dedicated agent checks cross-agent consistency and interface conformance before the build runs
+- **Critical Issue Gate** — agents surface unexpected problems via `CRITICAL ISSUES FOUND` in their output; Leader resolves them before the next wave
+- **Impact Ripple System** — when one agent changes a contract at runtime, future-wave agents receive a structured briefing automatically
+- **Lazy model escalation** — Leader writes detailed Implementation Briefs so implementers start at `haiku`; escalates to `sonnet` only on partial/blocked returns
+- **Rollback snapshot** per wave (git-stash or branch) with partial-rollback support
+- **Archaeology Agent** — post-execution narrative of what was built, why, and what a future maintainer must know
+- **Interactive HTML report** — wave timeline, impact registry, Sentinel findings, plan drift log, delivery summary
+
+Invoke with `/agent-forge-team` or natural phrases like *"execute this plan with agents"*,
+*"implement these steps with a team"*, *"build this with a multi-agent crew"*.
+
 ### `agent-debate-team` — v0.1.0
 
 Assemble a **team of specialized agents** that independently propose, then
@@ -214,20 +240,30 @@ AIAgentSkills/
 │               ├── debate-protocol.md       ← rounds, loop-prevention, decision rules, dissent
 │               ├── roles.md                 ← role catalog + mandatory Blind-Spot Hunter
 │               └── state-management.md      ← session dir schema + rolling-summary rule
-│       └── testing-explorer/           ← deployed copy (auto-loaded by Claude Code)
-│           ├── SKILL.md                ← 7-phase workflow
+│       ├── testing-explorer/           ← deployed copy (auto-loaded by Claude Code)
+│       │   ├── SKILL.md                ← 7-phase workflow
+│       │   ├── assets/
+│       │   │   └── test-report-template.html  ← dashboard shown in Preview panel
+│       │   └── references/
+│       │       ├── dotnet-test.md       ← discovery/run/rerun + TRX parsing
+│       │       ├── playwright-test.md   ← list/JSON reporter/--last-failed
+│       │       ├── result-parsing.md    ← unified model + failure classification
+│       │       ├── coverage.md          ← coverlet/dotnet-coverage auto-provision
+│       │       └── preview-panel.md     ← launch.json + preview_* orchestration
+│       └── agent-forge-team/           ← deployed copy (auto-loaded by Claude Code)
+│           ├── SKILL.md                ← 8-phase execution workflow
 │           ├── assets/
-│           │   └── test-report-template.html  ← dashboard shown in Preview panel
+│           │   └── report-template.html ← dark-theme HTML report (10 sections)
 │           └── references/
-│               ├── dotnet-test.md       ← discovery/run/rerun + TRX parsing
-│               ├── playwright-test.md   ← list/JSON reporter/--last-failed
-│               ├── result-parsing.md    ← unified model + failure classification
-│               ├── coverage.md          ← coverlet/dotnet-coverage auto-provision
-│               └── preview-panel.md     ← launch.json + preview_* orchestration
+│               ├── orchestration.md     ← Leader=main-thread, Implementation Brief, lazy escalation
+│               ├── roles.md             ← Sentinel, Interface Definer, Wave Reviewer, Verifier, Archaeology, Implementer
+│               ├── execution-protocol.md ← dependency graph, interface-first parallelism, Impact Ripple, rollback
+│               └── state-management.md  ← session dir schema, all file formats, rolling-wave-summary rule
 ├── skills/                            ← source-of-truth mirror of .claude/skills/
 │   ├── api-flow-debugger/
 │   ├── agent-debate-team/
-│   └── testing-explorer/
+│   ├── testing-explorer/
+│   └── agent-forge-team/
 ├── samples/
 │   ├── dotnet-web-api-sample/         ← .NET 8 + EF Core + SQLite test project
 │   ├── dotnet-web-api-sample.Tests/   ← xUnit fixture for testing-explorer
@@ -242,6 +278,10 @@ AIAgentSkills/
 │       │   └── BrokenEndpoint.cs.broken  ← rename to .cs to trigger Phase 2.5 fail
 │       └── README.md
 ├── api-flow-debugger.skill            ← distributable package (ZIP)
+├── agent-debate-team.skill            ← distributable package (ZIP)
+├── testing-explorer.skill             ← distributable package (ZIP)
+├── agent-forge-team.skill             ← distributable package (ZIP)
+├── CLAUDE.md                          ← release checklist + project conventions
 └── README.md
 ```
 
@@ -265,6 +305,29 @@ AIAgentSkills/
 ---
 
 ## Release Notes
+
+### 2026-05-17 — `agent-forge-team` v0.1.0 (initial release)
+
+**New skill: multi-agent plan execution with interface-first parallelism**
+
+- **8-phase workflow**: intake & plan derivation → team design → Sentinel pass → Interface Definer → wave execution loop → synthesis → HTML report → cleanup
+- **Interface-first parallelism**: Interface Definer agent defines all contracts (API shapes, TypeScript interfaces, DB schema, component props) before any implementation — collapses 7+ sequential dependency waves into 3 parallel waves
+- **Sentinel** (mandatory, pre-Interface): surfaces non-functional risks (security, performance, compliance, observability), missing plan steps, file conflict predictions, and downstream blast radius; findings feed directly into Interface Definer so contracts are complete before coding starts
+- **Wave Reviewer** (post-wave, pre-Verifier): semantic cross-check — cross-agent consistency, interface contract conformance, undeclared cascading impacts; outputs `PROCEED / CORRECT-AND-PROCEED / HALT`
+- **Critical Issue Gate**: agents declare `CRITICAL ISSUES FOUND` in their output contract; Leader runs a scan after every wave and resolves via `patch-on-main-thread`, `re-run-affected-tasks`, or `ask-user` before advancing
+- **Impact Ripple System**: append-only `impact-registry.md`; after each wave, Leader writes ripple briefings injected into the next wave's Implementation Briefs; three conflict tiers: Predicted (Sentinel) → Runtime deviation (ripple) → Integration failure (rollback)
+- **Implementation Brief pattern**: Leader writes per-role briefs (interfaces, pattern reference, error handling, impact briefing) before spawning agents; richer brief → cheaper model (`haiku`)
+- **Lazy model escalation**: Implementers start at `haiku`; escalate to `sonnet` on partial/blocked with a reasoning gap; Integration Verifier always `haiku`; Sentinel/Interface Definer/Wave Reviewer always `sonnet`
+- **Plan Drift Rule**: decision table for partial/blocked tasks — 6 blocker types mapped to Leader action (autonomous fix vs. `AskUserQuestion`)
+- **Plan Derivation Mode**: if user provides a goal instead of a structured plan, Leader derives a numbered task list and confirms with user before proceeding
+- **Rollback snapshots**: `git stash` or branch per wave with partial-rollback (restore only failing-task files)
+- **Archaeology Agent**: post-execution `sonnet` agent reads git diff + wave summaries → writes `DELIVERY-NARRATIVE.md` (decisions, drift, maintainer notes, open risks)
+- **Interactive HTML report**: nav bar with 10 sections — task list with sentinel-insert tags, team roster with model badges, interface contracts, sentinel risk cards, collapsible wave timeline with critical issue blocks, sortable impact registry, plan drift log, narrative, delivery + rollback map
+- **Session state**: `.agent-forge/<slug>/` with `interfaces/`, `briefs/`, `waves/`, `impacts/`, `snapshots/`, rolling wave summaries, append-only registries
+
+Invoke with `/agent-forge-team` or *"execute this plan with agents"*, *"build this with a multi-agent crew"*.
+
+---
 
 ### 2026-05-16 — `testing-explorer` v0.1.0 (initial release)
 

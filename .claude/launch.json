@@ -2,6 +2,12 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "agent-forge-report",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "7655", "--directory", "skills/agent-forge-team/assets"],
+      "port": 7655
+    },
+    {
       "name": "testing-explorer-report",
       "runtimeExecutable": "python",
       "runtimeArgs": ["-m", "http.server", "7654", "--directory", ".claude/skills/testing-explorer/.report"],
