@@ -45,31 +45,34 @@ A **Test Explorer that lives inside Claude Code's Preview panel**. Discovers the
 - **Failure root-cause analysis**: classifies each failure and extracts the first user-code `file:line`
 - Interactive dashboard: collapsible tree (✅/❌/⏭/◌), filter All/Failed/Skipped, search, click-to-expand failure detail with expected/actual diff
 
-### `agent-forge-team` — v0.1.0
+### `agent-forge-team` — v0.2.0
 
 Assemble a **crew of specialized agents** that **executes** a plan — writing real code, running
 real commands, and staying in sync through shared interface contracts and a structured impact
-system. Provide a plan (or just a goal) and the team builds it.
+system. Provide a plan, a goal, or a **ticket URL** and the team builds it.
 
 **When to use:**
 - You have a plan (or a high-level goal) spanning multiple files, layers, or domains
 - You want agents to work in parallel, not one at a time
+- You have a ticket (GitHub Issue, Linear, Jira, Azure DevOps) and want the team to execute it
 - Non-functional requirements (security, pagination, auth) must not be forgotten before coding begins
 - You need a full audit trail: what was built, what drifted, what changed across agents, and how to roll back
 
 **Key properties:**
+- **Ticket Ingestion Mode** — paste a ticket URL (GitHub, Linear, Jira, ADO) and the skill fetches the ticket, collects all subtasks recursively, maps them to the wave system, and updates ticket statuses live as agents complete work
 - **Interface-first parallelism** — an Interface Definer locks all contracts (TypeScript interfaces, API shapes, DB schema, component props) upfront, collapsing what would be 7+ sequential waves into 3
 - **Sentinel** (mandatory pre-execution) — surfaces security gaps, missing steps, file conflicts, and NFRs *before* any code is written; its findings shape the interface contracts
 - **Wave Reviewer** — after each wave, a dedicated agent checks cross-agent consistency and interface conformance before the build runs
 - **Critical Issue Gate** — agents surface unexpected problems via `CRITICAL ISSUES FOUND` in their output; Leader resolves them before the next wave
 - **Impact Ripple System** — when one agent changes a contract at runtime, future-wave agents receive a structured briefing automatically
 - **Lazy model escalation** — Leader writes detailed Implementation Briefs so implementers start at `haiku`; escalates to `sonnet` only on partial/blocked returns
-- **Rollback snapshot** per wave (git-stash or branch) with partial-rollback support
+- **Rollback snapshot** per wave (git-stash or branch) with partial-rollback support + automatic ticket-state revert
 - **Archaeology Agent** — post-execution narrative of what was built, why, and what a future maintainer must know
 - **Interactive HTML report** — wave timeline, impact registry, Sentinel findings, plan drift log, delivery summary
 
 Invoke with `/agent-forge-team` or natural phrases like *"execute this plan with agents"*,
-*"implement these steps with a team"*, *"build this with a multi-agent crew"*.
+*"implement these steps with a team"*, *"build this with a multi-agent crew"*,
+*"execute ticket ENG-123"*, *"run this GitHub issue with agents"*.
 
 ### `agent-debate-team` — v0.1.0
 
@@ -290,7 +293,8 @@ AIAgentSkills/
 │               ├── orchestration.md     ← Leader=main-thread, Implementation Brief, lazy escalation
 │               ├── roles.md             ← Sentinel, Interface Definer, Wave Reviewer, Verifier, Archaeology, Implementer
 │               ├── execution-protocol.md ← dependency graph, interface-first parallelism, Impact Ripple, rollback
-│               └── state-management.md  ← session dir schema, all file formats, rolling-wave-summary rule
+│               ├── state-management.md  ← session dir schema, all file formats, rolling-wave-summary rule
+│               └── ticket-ingestion.md  ← URL detection, MCP tools per system, field mapping, wave mapping, real-time status updates
 │       ├── skill-release/              ← deployed copy (auto-loaded by Claude Code)
 │       │   └── SKILL.md               ← 6-phase release checklist automation
 │       └── skill-to-local/            ← deployed copy (auto-loaded by Claude Code)
@@ -299,7 +303,7 @@ AIAgentSkills/
 │   ├── api-flow-debugger/
 │   ├── agent-debate-team/
 │   ├── testing-explorer/
-│   ├── agent-forge-team/
+│   ├── agent-forge-team/              ← includes references/ticket-ingestion.md (v0.2.0)
 │   ├── skill-release/
 │   └── skill-to-local/
 ├── samples/
@@ -345,6 +349,21 @@ AIAgentSkills/
 ---
 
 ## Release Notes
+
+### 2026-05-19 — `agent-forge-team` v0.2.0
+
+**New: Ticket Ingestion Mode — paste a ticket URL instead of writing a plan**
+
+- **Three plan input modes**: structured task list (existing), high-level goal / Plan Derivation Mode (existing), or **ticket URL / ticket ID** (new)
+- **Supported systems**: GitHub Issues / PRs, Linear issues, Jira (Atlassian Cloud + self-hosted), Azure DevOps work items
+- **Recursive subtask collection**: fetches the ticket + all subtasks to depth 2, deduplicates cross-referenced children, presents a `TICKET INGESTION SUMMARY` for user confirmation before executing
+- **Field mapping**: title → plan name, description + acceptance criteria → Goal + Success Criteria, labels/components → tech stack hints, subtasks → T-IDs with `[source: <ticket-ID>]` annotations, priority/milestone → Hard Constraints
+- **Tech stack detection**: keyword scan of labels + description prefix against 30+ framework/library names
+- **Ticket-derived wave mapping**: explicit ordering links → hard edges; infra/foundation subtasks → Wave 1; E2E subtasks → last wave; coarse subtasks with children → wave-group labels; everything else → Wave 2 parallel; max 8 Implementer roles per wave
+- **Real-time ticket status updates**: as agents complete work, the Leader calls MCP update tools to push status changes live — child tickets → "In Progress" when wave starts, "Done" when T-ID completes; parent → "In Progress" at first wave, "Done" when all tasks finish; all updates are best-effort (failures logged, execution never halted)
+- **Pre-execution state snapshot**: records current states of all tickets before Wave 1 starts; used to revert states on rollback
+- **Graceful degradation**: MCP unavailable → ask user to paste content manually; Jira/Linear state IDs unresolvable → skip sync + log; update failures → log and continue
+- New reference file: `references/ticket-ingestion.md` — URL detection patterns, MCP tool names and ToolSearch load commands per system, field mapping table, recursion algorithm, wave mapping classification, real-time update hooks, fallback procedures
 
 ### 2026-05-17 — `skill-release` + `skill-to-local` v0.1.0 (initial release)
 - `skill-release`: automates the full 7-step release checklist (package → deploy → README × 3 → commit → push)

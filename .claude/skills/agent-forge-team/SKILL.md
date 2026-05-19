@@ -1,7 +1,7 @@
 ---
 name: agent-forge-team
 description: This skill should be used when the user has a plan (a list of tasks or implementation steps) and wants a team of agents to EXECUTE it together — writing real code, running commands, and coordinating on shared files. Use when the user says "execute this plan with agents", "implement these steps with a team", "build this with a multi-agent crew", "run my implementation plan", "forge team", or "squad thực thi kế hoạch". Also use when the user provides a high-level goal (no plan yet) and wants agents to derive and execute a plan.
-version: 0.1.0
+version: 0.2.0
 tools: Read, Write, Edit, Glob, Grep, Bash, Agent, TodoWrite, AskUserQuestion
 ---
 
@@ -32,15 +32,75 @@ Implementation Brief format, and lazy-escalation protocol.
 
 ### 1a — Capture the plan
 
-Accept the plan from the user in any form:
+Detect which of three input forms the user provided — check in this order:
 
-- **Structured plan**: a numbered task list → use as-is, assign T-IDs if missing.
-- **High-level goal** (no task list) → **Plan Derivation Mode**: Leader reasons directly
-  and produces a numbered task list, then shows it to the user for confirmation via
-  `AskUserQuestion` before continuing. Do not proceed until the user confirms or edits.
+- **Ticket URL or ticket ID** — a GitHub Issue / PR URL, Linear issue URL, Jira URL,
+  Azure DevOps work item URL, or a plain ticket ID like `ENG-123` / `PROJ-456` →
+  **Ticket Ingestion Mode** (see below).
+- **Structured plan** — a numbered task list → use as-is, assign T-IDs if missing.
+- **High-level goal** (no task list, no ticket URL) → **Plan Derivation Mode**: Leader
+  reasons directly and produces a numbered task list, then shows it to the user for
+  confirmation via `AskUserQuestion` before continuing. Do not proceed until confirmed.
 
-Also capture:
-- **Tech stack** — required for Sentinel and Interface Definer (e.g. "NestJS + PostgreSQL + Next.js 14")
+#### Ticket Ingestion Mode
+
+See `references/ticket-ingestion.md` for URL detection patterns, MCP tool names, field
+mapping, subtask recursion, wave mapping rules, real-time status update hooks, and fallback
+procedures.
+
+Steps:
+1. **Detect** — match the input against URL/ID patterns in the reference file. If a
+   plain-ID (`PROJ-123`) is ambiguous between Jira and Linear, ask the user to confirm
+   the system via `AskUserQuestion` before fetching.
+2. **Load MCP schema** — all ticket-system tools are deferred; call `ToolSearch` before
+   invoking any of them (e.g. `ToolSearch({ query: "select:mcp__github__get_issue" })`).
+   Also pre-load the update tool for the detected system — it will be needed in Phase 5.
+3. **Fetch ticket** — title, description, acceptance criteria, labels/components/tags,
+   last 5 comments, and all subtasks recursively to depth 2. If deeper children exist,
+   note them in `plan.md` assumptions and skip.
+4. **Map fields** (full table in reference file):
+   - title → plan name + slug
+   - description + acceptance criteria → Goal + Success Criteria in `plan.md`
+   - labels/components/tags → tech stack hints (keyword-matched)
+   - subtasks → T-IDs with `[source: <ticket-ID>]` annotations
+   - priority Critical/P0 → Hard Constraints entry
+   - milestone/sprint → Hard Constraints deadline
+5. **Present `TICKET INGESTION SUMMARY`** via `AskUserQuestion`:
+   ```
+   TICKET INGESTION SUMMARY
+   Source: <system> — <URL>
+   Title:  <title>
+   Status: <open | closed | in-progress>   ← warn if already closed
+
+   Goal derived: <2-3 sentence condensed description + acceptance criteria>
+   Tech stack hints: <detected keywords or "none detected — will ask">
+   Subtasks found: <N total>
+     [T1] <title> (<source-ID>)
+       [T1.1] <title> (<source-ID>)
+     [T2] <title> (<source-ID>)
+     ...
+   Success criteria: <from acceptance criteria>
+   Assumptions: <anything absent or truncated>
+
+   Proceed with this plan, or edit the task list first?
+   ```
+   Wait for user confirmation or edits before continuing to 1b.
+6. **Snapshot ticket states** — before Phase 5 Wave 1, read current states of the parent
+   ticket and all child tickets; write to `.agent-forge/<slug>/ticket-states.md`. Used to
+   revert states on rollback.
+7. **Real-time status updates** (during Phase 5 execution):
+   - When a wave starts → set all child tickets assigned to that wave to "In Progress";
+     set parent to "In Progress" on the first wave.
+   - When a T-ID is marked `done` → set the corresponding child ticket to "Done"/"Closed".
+   - When all T-IDs across all waves are `done` → set parent ticket to "Done"/"Closed".
+   - On rollback → revert affected tickets to their pre-execution states from the snapshot.
+   - All updates are best-effort: log failures in `decisions.md` and continue. Never halt
+     execution because a status sync failed.
+8. **If MCP unavailable** — `AskUserQuestion`: "I cannot fetch <system> tickets
+   automatically. Paste the ticket content here, or switch to Plan Derivation Mode."
+
+Also capture (from ticket if available, otherwise ask):
+- **Tech stack** — required for Sentinel and Interface Definer
 - **Hard constraints** — must-not-break files, compliance requirements, deadline
 - **Success criteria** — what "done" means: tests pass, CI green, manual smoke-test, etc.
 - **Verification commands** — exact commands to run (`npm test`, `dotnet test`, `npx playwright test`)
@@ -80,6 +140,9 @@ Reason directly (no subagent). Steps:
    - *Type/interface*: Task B imports a type/class Task A defines → B depends on A (resolved by Interface Definer in `parallel` mode)
    - *Data*: Task B processes data Task A seeds/migrates → B depends on A
    - *Explicit ordering cues* in the plan text
+   - *Ticket ordering links*: if the plan came from Ticket Ingestion Mode and the ticket
+     system provided explicit predecessor/dependency links (fetched in Phase 1a), treat
+     these as hard ordering edges — they override heuristic classification.
 
 2. **Separate runtime dependencies from code-level dependencies.**
    - *Runtime sequential* (must stay in Wave 1): DB migrations, infra setup, library installs
@@ -89,6 +152,13 @@ Reason directly (no subagent). Steps:
    - **Wave 1** — data/infra foundation (schema, migrations, scaffold — true runtime deps)
    - **Wave 2** — all application-layer implementers in parallel (services, API, frontend, tests)
    - **Wave 3** — E2E / integration tests (require running app)
+
+   **Ticket-derived plans**: apply the wave mapping from
+   `references/ticket-ingestion.md §Subtask → Wave Mapping` before the default.
+   Infra/foundation subtasks → Wave 1; E2E subtasks → last wave; explicit ordering
+   links → sequence; everything else → Wave 2 parallel. The 3-wave target still holds —
+   ticket classification determines placement, not additional waves.
+   Cap: maximum 8 Implementer roles per wave; merge smallest domain groups first if exceeded.
 
 4. **Group Wave 2 tasks by domain** → assign one Implementer role per domain group.
    Domains: `data-layer`, `backend-services`, `backend-api`, `frontend-core`,
@@ -413,3 +483,8 @@ Offer to delete: `waves/`, `impacts/wave-*/`, `snapshots/`, `roles/`, `briefs/`.
 - `references/state-management.md` — session directory schema, all file schemas,
   rolling-wave-summary rule, resource lifecycle.
 - `assets/report-template.html` — HTML report template with `{{PLACEHOLDER}}`s.
+- `references/ticket-ingestion.md` — URL/ID detection patterns (GitHub, Linear, Jira, Azure DevOps);
+  MCP tool names and load-via-ToolSearch instructions per system; field mapping table; subtask
+  recursion algorithm (depth 2, deduplication); domain keyword table; wave mapping rules for
+  ticket-derived subtasks; real-time status update hooks + pre-execution state snapshot; fallback
+  procedures when MCP is unavailable.
