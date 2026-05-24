@@ -154,6 +154,46 @@ a { color: var(--blue); text-decoration: none; }
 .gap-covered { color: var(--green); }
 .gap-missing { color: var(--red); }
 
+/* Scope Impact Map */
+.scope-target-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; margin-bottom: 20px; display: flex; align-items: flex-start; gap: 20px; flex-wrap: wrap; }
+.scope-target-info { flex: 1; min-width: 200px; }
+.scope-target-name { font-size: 18px; font-weight: 700; font-family: var(--mono); color: var(--blue); margin-bottom: 4px; }
+.scope-target-file { font-size: 12px; color: var(--text-muted); font-family: var(--mono); margin-bottom: 8px; }
+.scope-target-meta { display: flex; gap: 8px; flex-wrap: wrap; }
+.scope-layer-badge { display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; background: rgba(88,166,255,0.12); color: var(--blue); border: 1px solid rgba(88,166,255,0.3); }
+.scope-boundary-badge { display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+.boundary-entry-point { background: rgba(188,140,255,0.12); color: var(--purple); border: 1px solid rgba(188,140,255,0.3); }
+.boundary-domain-core { background: rgba(63,185,80,0.12); color: var(--green); border: 1px solid rgba(63,185,80,0.3); }
+.boundary-adapter { background: rgba(227,179,65,0.12); color: var(--orange); border: 1px solid rgba(227,179,65,0.3); }
+.boundary-shared-utility { background: rgba(248,81,73,0.12); color: var(--red); border: 1px solid rgba(248,81,73,0.3); }
+.boundary-leaf-node { background: rgba(139,148,158,0.12); color: var(--text-muted); border: 1px solid var(--border); }
+.blast-badge { display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+.blast-low { background: rgba(63,185,80,0.12); color: var(--green); border: 1px solid rgba(63,185,80,0.3); }
+.blast-medium { background: rgba(227,179,65,0.12); color: var(--orange); border: 1px solid rgba(227,179,65,0.3); }
+.blast-high { background: rgba(248,81,73,0.12); color: var(--red); border: 1px solid rgba(248,81,73,0.3); }
+.scope-stats { display: flex; flex-direction: column; gap: 6px; }
+.scope-stat { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.scope-stat-label { color: var(--text-muted); min-width: 90px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+.scope-stat-value { font-weight: 700; }
+.scope-insight { background: rgba(88,166,255,0.07); border: 1px solid rgba(88,166,255,0.25); border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; font-size: 13px; color: var(--text); }
+.scope-insight::before { content: '💡 '; }
+.scope-call-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 20px; }
+.scope-call-table th { background: var(--surface2); color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+.scope-call-table td { padding: 9px 12px; border-bottom: 1px solid #21262d; vertical-align: middle; }
+.scope-call-table tr:last-child td { border-bottom: none; }
+.caller-entry-point td { background: rgba(188,140,255,0.04); }
+.callee-external td { background: rgba(248,81,73,0.03); }
+.call-type-pill { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 600; background: var(--surface2); color: var(--text-muted); border: 1px solid var(--border); }
+.mock-pill { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+.mock-yes { background: rgba(248,81,73,0.12); color: var(--red); border: 1px solid rgba(248,81,73,0.3); }
+.mock-no { background: rgba(63,185,80,0.12); color: var(--green); border: 1px solid rgba(63,185,80,0.3); }
+.mock-strategy-pill { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 11px; background: var(--surface2); color: var(--blue); border: 1px solid rgba(88,166,255,0.25); }
+.io-flag { color: var(--orange); font-size: 12px; font-weight: 700; }
+.scope-sub-heading { font-size: 13px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px; margin: 16px 0 8px; }
+.depth-badge { display: inline-block; width: 20px; height: 20px; border-radius: 50%; font-size: 11px; font-weight: 700; text-align: center; line-height: 20px; background: var(--surface2); color: var(--text-muted); border: 1px solid var(--border); }
+.depth-1 { background: rgba(88,166,255,0.15); color: var(--blue); border-color: rgba(88,166,255,0.4); }
+.depth-2 { background: var(--surface2); color: var(--text-muted); }
+
 /* CI Pipeline */
 .pipeline { display: flex; align-items: center; gap: 0; flex-wrap: wrap; margin: 8px 0 20px; }
 .pipe-stage { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; min-width: 140px; }
@@ -236,6 +276,47 @@ h4.sub-heading { font-size: 12px; color: var(--text-muted); text-transform: uppe
 
   <!-- Summary Cards (rendered by JS) -->
   <div class="cards" id="summary-cards"></div>
+
+  <!-- Scope Impact Map (only when scope_analysis != null) -->
+  <div class="section" id="sec-scope-wrap" style="display:none">
+    <div class="section-header" onclick="toggleSection(this)">
+      🎯 Scope Impact Map
+      <span class="section-toggle open">▶</span>
+    </div>
+    <div class="section-body" id="sec-scope">
+      <!-- Target card (injected by JS) -->
+      <div id="scope-target-card-wrap"></div>
+      <!-- Key insight banner -->
+      <div class="scope-insight" id="scope-insight"></div>
+      <!-- Callers table -->
+      <div class="scope-sub-heading">⬆ Callers — Who calls this target?</div>
+      <table class="scope-call-table" id="callers-table">
+        <thead><tr>
+          <th>Caller</th>
+          <th>File</th>
+          <th>Layer</th>
+          <th>Call Type</th>
+          <th>Depth</th>
+        </tr></thead>
+        <tbody id="callers-body"></tbody>
+      </table>
+      <div id="callers-empty" style="display:none;padding:10px 0;color:var(--text-muted);font-size:13px">No direct callers found — may be an entry point or newly added code.</div>
+      <!-- Callees table -->
+      <div class="scope-sub-heading">⬇ Callees — What this target calls</div>
+      <table class="scope-call-table" id="callees-table">
+        <thead><tr>
+          <th>Dependency</th>
+          <th>File</th>
+          <th>Layer</th>
+          <th>External I/O</th>
+          <th>Mock?</th>
+          <th>Strategy</th>
+        </tr></thead>
+        <tbody id="callees-body"></tbody>
+      </table>
+      <div id="callees-empty" style="display:none;padding:10px 0;color:var(--text-muted);font-size:13px">No callees found — this appears to be a pure leaf function with no dependencies.</div>
+    </div>
+  </div>
 
   <!-- Testing Model -->
   <div class="section">
@@ -526,6 +607,88 @@ function toggleSection(header) {
       <div class="card-sub">${esc(c.sub)}</div>
     </div>`;
   });
+})();
+
+// ── Scope Impact Map ───────────────────────────────────────────────────────
+(function() {
+  const sa = reportData.scope_analysis;
+  if (!sa || !sa.target) return;
+  document.getElementById('sec-scope-wrap').style.display = '';
+
+  const t = sa.target;
+  // Boundary badge class
+  const boundaryCls = {
+    'entry-point': 'boundary-entry-point',
+    'domain-core': 'boundary-domain-core',
+    'adapter': 'boundary-adapter',
+    'shared-utility': 'boundary-shared-utility',
+    'leaf-node': 'boundary-leaf-node'
+  }[t.boundary_classification] || 'boundary-leaf-node';
+  const blastCls = { 'low': 'blast-low', 'medium': 'blast-medium', 'high': 'blast-high' }[t.blast_radius] || 'blast-medium';
+
+  // Target info card
+  document.getElementById('scope-target-card-wrap').innerHTML = `
+    <div class="scope-target-card">
+      <div class="scope-target-info">
+        <div class="scope-target-name">${esc(t.name)}</div>
+        <div class="scope-target-file">${esc(t.file||'')}</div>
+        ${t.signature ? `<div style="font-size:12px;color:var(--text-muted);font-family:var(--mono);margin-bottom:8px">${esc(t.signature)}</div>` : ''}
+        <div class="scope-target-meta">
+          <span class="scope-layer-badge">${esc(t.layer||'unknown')}</span>
+          <span class="scope-boundary-badge ${boundaryCls}">${esc((t.boundary_classification||'').replace(/-/g,' '))}</span>
+          <span class="blast-badge ${blastCls}">Blast: ${esc(t.blast_radius||'?')}</span>
+        </div>
+      </div>
+      <div class="scope-stats">
+        <div class="scope-stat"><span class="scope-stat-label">Callers</span><span class="scope-stat-value">${sa.caller_count ?? (sa.callers||[]).length}</span></div>
+        <div class="scope-stat"><span class="scope-stat-label">Callees</span><span class="scope-stat-value">${sa.callee_count ?? (sa.callees||[]).length}</span></div>
+        <div class="scope-stat"><span class="scope-stat-label">External I/O</span><span class="scope-stat-value" style="color:${(sa.external_io_count||0)>0?'var(--orange)':'var(--green)'}">${sa.external_io_count||0}</span></div>
+        <div class="scope-stat"><span class="scope-stat-label">Mock needed</span><span class="scope-stat-value" style="color:${(sa.mock_needed_count||0)>0?'var(--red)':'var(--green)'}">${sa.mock_needed_count||0}</span></div>
+      </div>
+    </div>`;
+
+  // Key insight
+  const insightEl = document.getElementById('scope-insight');
+  insightEl.textContent = t.key_insight || sa.recommended_test_entry_point || '';
+  if (!insightEl.textContent) insightEl.style.display = 'none';
+
+  // Callers table
+  const callers = sa.callers || [];
+  if (callers.length === 0) {
+    document.getElementById('callers-table').style.display = 'none';
+    document.getElementById('callers-empty').style.display = '';
+  } else {
+    const cb = document.getElementById('callers-body');
+    callers.forEach(c => {
+      const isEntry = c.layer === 'controller' || c.layer === 'cli' || c.call_type === 'queue-consumer' || c.call_type === 'event-trigger';
+      cb.innerHTML += `<tr class="${isEntry?'caller-entry-point':''}">
+        <td><strong>${esc(c.name)}</strong></td>
+        <td style="font-size:12px;font-family:var(--mono);color:var(--text-muted)">${esc(c.file||'—')}</td>
+        <td><span class="scope-layer-badge">${esc(c.layer||'?')}</span></td>
+        <td><span class="call-type-pill">${esc((c.call_type||'direct-call').replace(/-/g,' '))}</span></td>
+        <td><span class="depth-badge depth-${c.distance||1}">${c.distance||1}</span></td>
+      </tr>`;
+    });
+  }
+
+  // Callees table
+  const callees = sa.callees || [];
+  if (callees.length === 0) {
+    document.getElementById('callees-table').style.display = 'none';
+    document.getElementById('callees-empty').style.display = '';
+  } else {
+    const db = document.getElementById('callees-body');
+    callees.forEach(d => {
+      db.innerHTML += `<tr class="${d.is_external_io?'callee-external':''}">
+        <td><strong>${esc(d.name)}</strong></td>
+        <td style="font-size:12px;font-family:var(--mono);color:var(--text-muted)">${esc(d.file||'—')}</td>
+        <td><span class="scope-layer-badge">${esc(d.layer||'?')}</span></td>
+        <td>${d.is_external_io ? '<span class="io-flag">⚡ I/O</span>' : '<span style="color:var(--text-muted)">—</span>'}</td>
+        <td>${d.mock_needed ? '<span class="mock-pill mock-yes">Mock</span>' : '<span class="mock-pill mock-no">Real</span>'}</td>
+        <td>${d.mock_strategy ? `<span class="mock-strategy-pill">${esc(d.mock_strategy)}</span>` : '—'}</td>
+      </tr>`;
+    });
+  }
 })();
 
 // ── Testing Model SVG ──────────────────────────────────────────────────────

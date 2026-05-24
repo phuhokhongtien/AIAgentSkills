@@ -11,9 +11,48 @@ The `strategy` object injected as `reportData` in the HTML template.
   "project_shape": "api|web-app|library|microservices|cli|fullstack",
   "intake": {
     "mode": "new-strategy|audit|focused",
-    "scope": "whole project | <service name>",
+    "scope": "whole-project|sub-project|class|function",
+    "scope_target": null,                         // null for whole-project; e.g. "OrderService" or "createOrder"
+    "scope_path": null,                           // resolved file path, e.g. "src/services/order.service.ts"
     "focus_type": null                            // or "unit|integration|api|ui|load|mocking|bdd"
   },
+  "scope_analysis": null,                         // null unless scope is "class" or "function"
+  // When populated, scope_analysis shape:
+  // {
+  //   "target": {
+  //     "name": "OrderService.createOrder",
+  //     "file": "src/services/order.service.ts",
+  //     "layer": "service",                       // "controller"|"service"|"use-case"|"repository"|"utility"|"domain-model"|"cli"|"unknown"
+  //     "signature": "async createOrder(dto: CreateOrderDto): Promise<Order>",
+  //     "boundary_classification": "domain-core", // "entry-point"|"domain-core"|"adapter"|"shared-utility"|"leaf-node"
+  //     "blast_radius": "medium",                 // "low" (≤2 callers)|"medium" (3–7)|"high" (≥8)
+  //     "key_insight": "OrderService.createOrder is a domain-core method with 2 external I/O callees..."
+  //   },
+  //   "callers": [
+  //     {
+  //       "name": "OrderController.create",
+  //       "file": "src/controllers/order.controller.ts",
+  //       "layer": "controller",
+  //       "call_type": "direct-call",             // "direct-call"|"constructor-injection"|"event-trigger"|"queue-consumer"
+  //       "distance": 1                           // 1=direct caller, 2=caller's caller
+  //     }
+  //   ],
+  //   "callees": [
+  //     {
+  //       "name": "OrderRepository.save",
+  //       "file": "src/repositories/order.repository.ts",
+  //       "layer": "repository",
+  //       "is_external_io": true,
+  //       "mock_needed": true,
+  //       "mock_strategy": "fake"                 // "stub"|"fake"|"spy"|"mock"|"real"
+  //     }
+  //   ],
+  //   "caller_count": 3,
+  //   "callee_count": 4,
+  //   "external_io_count": 2,
+  //   "mock_needed_count": 2,
+  //   "recommended_test_entry_point": "Unit test createOrder() directly, mocking OrderRepository and StripeClient"
+  // }
   "stack": {
     "language": "TypeScript",
     "framework": "Express",
@@ -150,6 +189,7 @@ The `strategy` object injected as `reportData` in the HTML template.
 | `{{TIMESTAMP}}` | string | `strategy.timestamp` (formatted) |
 | `{{MODE_LABEL}}` | string | "New Strategy" / "Audit" / "Focused" |
 | `{{PROJECT_SHAPE}}` | string | `strategy.project_shape` |
+| `{{SCOPE_TARGET}}` | string | `strategy.intake.scope_target` or "" (whole-project) |
 | `{{TESTING_MODEL}}` | string | `strategy.testing_model` |
 | `{{STACK_LANGUAGE}}` | string | `strategy.stack.language` |
 | `{{STACK_FRAMEWORK}}` | string | `strategy.stack.framework` |
@@ -236,6 +276,7 @@ Color matches stage color from `ci_plan.stages[].color`.
 | Section | Default state |
 |---|---|
 | Summary Cards | Always visible (not collapsible) |
+| Scope Impact Map | Open — only rendered when `scope_analysis != null` |
 | Testing Model | Open |
 | Test Types | Open (individual cards collapsible) |
 | Mocking per Test Type | Open — never auto-collapsed |

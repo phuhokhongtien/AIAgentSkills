@@ -25,7 +25,7 @@ Debug any API endpoint by tracing the full request flow — from curl to respons
 - **Precise log parsing**: ANSI-stripping pre-processor → canonical clean log; anchored per-framework patterns replace naive `grep SELECT|INSERT` (eliminates false positives from stack traces and JSON request bodies); ripgrep multiline for multi-line query blocks
 - **Rich DB Queries dashboard**: interactive table with expandable rows, CSS-only SQL syntax highlight, filter (All / Slow / N+1), sort, search, copy-SQL button, timeline strip, N+1 shape-group color coding
 
-### `testing-strategy` — v0.1.1
+### `testing-strategy` — v0.1.2
 
 A **Testing Strategist** that analyzes your project's codebase and produces a project-specific testing strategy — covering unit, integration, API, UI/E2E, load, performance, automation, and BDD. Generates an interactive dark-theme HTML report with a test pyramid/trophy visualization, overlap detection, mocking guidance, and a prioritized action list.
 
@@ -390,6 +390,27 @@ AIAgentSkills/
 ---
 
 ## Release Notes
+
+### 2026-05-24 — `testing-strategy` v0.1.2 — focused scope + call graph analysis
+
+- **Scope granularity**: intake now accepts `class` or `function` as scope targets in addition to `whole-project` and `sub-project`
+- **Phase 2.5 — Focused Scope Analysis**: new phase (activated only for class/function scope) that builds a 2-level call graph around the target:
+  - **Step 1 — Locate**: finds the target file via Grep; records layer, signature
+  - **Step 2 — Caller analysis**: greps for all references (direct calls, constructor injection, event triggers, queue consumers) up to depth 2; classifies each caller by layer
+  - **Step 3 — Callee analysis**: reads the target body; maps all downstream dependencies; flags external I/O; assigns mock strategy (stub/fake/spy/mock/real) per callee
+  - **Step 4 — Boundary classification**: `entry-point` / `domain-core` / `adapter` / `shared-utility` / `leaf-node` — drives the entire test strategy
+  - **Step 5 — Test entry point recommendation**: maps boundary type to the most effective test layer
+- **Phase 4 scope-aware synthesis**: when `scope_analysis` exists, testing model rationale, mocking school, and priority matrix are all narrowed to the target's actual call graph instead of the whole project
+- **HTML report — Scope Impact Map section**: new section (shown only when `scope_analysis` exists):
+  - **Target card**: name, file, signature, layer badge, boundary badge, blast-radius badge
+  - **Stats**: caller count, callee count, external I/O count, mock-needed count
+  - **💡 Key insight** banner with recommended test entry point
+  - **Callers table**: depth badge, call-type pill, entry-point rows highlighted purple
+  - **Callees table**: external I/O flag (⚡), mock pill (red/green), mock-strategy pill
+- **Phase 6 chat summary**: prints scope block (boundary classification, blast radius, caller/callee counts, key insight) above the test type table when scope is class/function
+- **JSON schema update**: `intake` gains `scope_target` + `scope_path`; `scope_analysis` object added (null for whole-project)
+
+---
 
 ### 2026-05-24 — `testing-strategy` v0.1.1 — intra-type overlap detection
 
