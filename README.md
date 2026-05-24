@@ -25,6 +25,35 @@ Debug any API endpoint by tracing the full request flow — from curl to respons
 - **Precise log parsing**: ANSI-stripping pre-processor → canonical clean log; anchored per-framework patterns replace naive `grep SELECT|INSERT` (eliminates false positives from stack traces and JSON request bodies); ripgrep multiline for multi-line query blocks
 - **Rich DB Queries dashboard**: interactive table with expandable rows, CSS-only SQL syntax highlight, filter (All / Slow / N+1), sort, search, copy-SQL button, timeline strip, N+1 shape-group color coding
 
+### `testing-strategy` — v0.1.0
+
+A **Testing Strategist** that analyzes your project's codebase and produces a project-specific testing strategy — covering unit, integration, API, UI/E2E, load, performance, automation, and BDD. Generates an interactive dark-theme HTML report with a test pyramid/trophy visualization, overlap detection, mocking guidance, and a prioritized action list.
+
+**When to use:**
+- Greenfield project: no tests yet — where do you start?
+- Existing project: audit test quality, find gaps, eliminate redundant tests
+- Focused question: "Should I mock the database?", "How do I structure BDD?", "Why do my tests overlap?"
+
+**What it analyzes:**
+- Stack detection: language, framework, test tools, CI config, project shape (api / web-app / library / microservices / fullstack)
+- Architectural layer mapping: thin CRUD vs. thick domain logic — determines which test type is most valuable per layer
+- Complexity profiling per source file: branch count → unit test candidate signals
+- Existing test quality: AAA pattern, mock boundary correctness, naming, assertion density
+- **Overlap detection**: flags behaviors tested at multiple layers (unit + integration + E2E covering same thing); recommends which layer should own each behavior
+- External dependency map: DB, HTTP clients, queues, time, payment — maps each to the right mock boundary per test type
+
+**Key outputs:**
+- Recommended testing model: Test Pyramid / Test Trophy / Honeycomb — with project-specific rationale
+- Per test type recommendation: Essential / Recommended / Optional / Skip — justified by actual code analysis
+- **Mocking per Test Type table**: what to mock and NOT to mock in unit, integration, API, UI, automation, and BDD tests
+- **Test Overlap Analysis**: table of redundant coverage with recommended owner per behavior
+- BDD guidance: Gherkin examples when applicable; explains when BDD helps vs. when it's overkill
+- Coverage targets realistic to the project type
+- CI/CD pipeline structure: which test types run at which stage, parallelism tips
+- Priority matrix (2×2 impact/effort) with action items P0→P2
+
+Invoke with `/testing-strategy` or natural phrases like *"give me a testing strategy for this project"*, *"audit my tests"*, *"should I use mocks here?"*, *"chiến lược test"*, *"nên test gì"*.
+
 ### `testing-explorer` — v0.1.0
 
 A **Test Explorer that lives inside Claude Code's Preview panel**. Discovers the test tree, runs tests, classifies failures with a root cause, and collects coverage automatically — solving the problem that test projects are otherwise invisible in Claude Code and can't be run/checked at a glance.
@@ -295,6 +324,16 @@ AIAgentSkills/
 │               ├── execution-protocol.md ← dependency graph, interface-first parallelism, Impact Ripple, rollback
 │               ├── state-management.md  ← session dir schema, all file formats, rolling-wave-summary rule
 │               └── ticket-ingestion.md  ← URL detection, MCP tools per system, field mapping, wave mapping, real-time status updates
+│       ├── testing-strategy/           ← deployed copy (auto-loaded by Claude Code)
+│       │   ├── SKILL.md                ← 6-phase strategy workflow
+│       │   ├── assets/
+│       │   │   └── report-template.html ← 11-section dark-theme HTML report
+│       │   └── references/
+│       │       ├── testing-mindset.md   ← pyramid/trophy/honeycomb, London vs Detroit, FIRST
+│       │       ├── test-types.md        ← unit/integration/API/UI/load/perf/automation/BDD
+│       │       ├── mocking-guide.md     ← test doubles taxonomy + per-type mock rules
+│       │       ├── stack-detection.md   ← file patterns, tool detection, project shape rules
+│       │       └── report-format.md     ← JSON schema, placeholder list, SVG specs
 │       ├── skill-release/              ← deployed copy (auto-loaded by Claude Code)
 │       │   └── SKILL.md               ← 6-phase release checklist automation
 │       └── skill-to-local/            ← deployed copy (auto-loaded by Claude Code)
@@ -303,6 +342,7 @@ AIAgentSkills/
 │   ├── api-flow-debugger/
 │   ├── agent-debate-team/
 │   ├── testing-explorer/
+│   ├── testing-strategy/              ← v0.1.0 — testing strategy advisor
 │   ├── agent-forge-team/              ← includes references/ticket-ingestion.md (v0.2.0)
 │   ├── skill-release/
 │   └── skill-to-local/
@@ -322,6 +362,7 @@ AIAgentSkills/
 ├── api-flow-debugger.skill            ← distributable package (ZIP)
 ├── agent-debate-team.skill            ← distributable package (ZIP)
 ├── testing-explorer.skill             ← distributable package (ZIP)
+├── testing-strategy.skill             ← distributable package (ZIP)
 ├── agent-forge-team.skill             ← distributable package (ZIP)
 ├── skill-release.skill                ← distributable package (ZIP)
 ├── skill-to-local.skill               ← distributable package (ZIP)
@@ -349,6 +390,26 @@ AIAgentSkills/
 ---
 
 ## Release Notes
+
+### 2026-05-24 — `testing-strategy` v0.1.0 (initial release)
+
+**New skill: project-specific testing strategy advisor with overlap detection and mocking guidance**
+
+- **6-phase workflow**: intake → stack detection → deep codebase analysis → strategy synthesis → HTML report → chat summary
+- **Codebase-grounded recommendations**: reads architectural layers, complexity signals (branch counts), and existing test files before making any recommendation — no generic advice
+- **Testing model selection**: picks Test Pyramid / Test Trophy / Honeycomb based on project shape and domain thickness, with a one-sentence rationale tied to actual code
+- **Per test type recommendations**: Unit, Integration, API, UI/E2E, Load, Performance, Automation, BDD — each graded Essential / Recommended / Optional / Skip with project-specific justification
+- **BDD section**: Gherkin Given/When/Then guidance for non-technical stakeholders; SpecFlow / Cucumber.js / Behave / pytest-bdd; explains when BDD helps vs. when it adds overhead
+- **Overlap detection**: cross-references test files to flag behaviors tested redundantly at multiple layers (unit + integration + E2E covering the same thing); recommends which layer should own each behavior
+- **Mocking per Test Type table**: always-visible table in the report showing what to mock / NOT mock in unit, integration, API, UI component, UI/E2E, automation, and BDD tests — with key reasons
+- **Mocking deep-dive**: London vs. Detroit/Chicago school selection (canvas dial visualization); test doubles taxonomy (Dummy / Stub / Spy / Mock / Fake); anti-patterns list; tools by stack
+- **External dependency map**: greps source for DB, HTTP clients, queues, file I/O, time, email, payment — maps each to the right mock boundary per test type
+- **Coverage targets**: realistic per project type (library / API / web-app / microservices)
+- **Priority matrix**: 2×2 impact/effort scatter plot; dots are clickable with action detail tooltips
+- **CI/CD integration section**: horizontal pipeline stage visualization (Fast Unit → Integration → E2E → Deploy) with trigger, duration, and parallelism tips
+- **Interactive HTML report**: 11 sections, GitHub dark theme (`#0d1117`), SVG pyramid/trophy/honeycomb, all sections collapsible, client-side vanilla JS — no external deps
+- **References**: `testing-mindset.md` (models, FIRST, AAA, London vs Detroit), `test-types.md` (full per-type guide including BDD), `mocking-guide.md` (taxonomy + per-type best practices), `stack-detection.md` (file patterns, tool detection, project shape rules), `report-format.md` (JSON schema, placeholder list, SVG spec)
+- Tools: `Read, Write, Glob, Grep, Bash, AskUserQuestion` — no agents, single-session reasoner, read-only on source code
 
 ### 2026-05-19 — `agent-forge-team` v0.2.0
 
