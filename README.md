@@ -39,20 +39,23 @@ A **Testing Strategist** that analyzes your project's codebase and produces a pr
 - Architectural layer mapping: thin CRUD vs. thick domain logic — determines which test type is most valuable per layer
 - Complexity profiling per source file: branch count → unit test candidate signals
 - Existing test quality: AAA pattern, mock boundary correctness, naming, assertion density
-- **Overlap detection**: flags behaviors tested at multiple layers (unit + integration + E2E covering same thing); recommends which layer should own each behavior
+- **Cross-layer overlap detection**: flags behaviors tested redundantly across layers (unit + integration + E2E covering the same thing); recommends which layer owns each behavior
+- **Intra-type duplicate detection**: finds copy-paste unit tests for the same function, duplicate integration tests hitting the same endpoint, and repeated E2E journeys across files — classifies each as `identical` / `near-identical` / `subset`
 - External dependency map: DB, HTTP clients, queues, time, payment — maps each to the right mock boundary per test type
+- **Focused scope — call graph analysis**: when targeting a single class or function, greps callers (depth 2) and callees, classifies the target as `entry-point` / `domain-core` / `adapter` / `shared-utility` / `leaf-node`, and derives the most effective test entry point from the actual impact surface
 
 **Key outputs:**
 - Recommended testing model: Test Pyramid / Test Trophy / Honeycomb — with project-specific rationale
 - Per test type recommendation: Essential / Recommended / Optional / Skip — justified by actual code analysis
 - **Mocking per Test Type table**: what to mock and NOT to mock in unit, integration, API, UI, automation, and BDD tests
-- **Test Overlap Analysis**: table of redundant coverage with recommended owner per behavior
+- **Test Overlap Analysis**: two-tab table — Cross-Layer Overlaps and Within-Type Duplicates — with recommended owner and consolidation advice
+- **Scope Impact Map** *(focused scope only)*: target card, callers table, callees table with mock strategy per dependency, blast-radius badge
 - BDD guidance: Gherkin examples when applicable; explains when BDD helps vs. when it's overkill
-- Coverage targets realistic to the project type
+- Coverage targets realistic to the project type (100% branch for single class/function scope)
 - CI/CD pipeline structure: which test types run at which stage, parallelism tips
 - Priority matrix (2×2 impact/effort) with action items P0→P2
 
-Invoke with `/testing-strategy` or natural phrases like *"give me a testing strategy for this project"*, *"audit my tests"*, *"should I use mocks here?"*, *"chiến lược test"*, *"nên test gì"*.
+Invoke with `/testing-strategy` or natural phrases like *"give me a testing strategy for this project"*, *"audit my tests"*, *"how should I test `OrderService`?"*, *"what calls this function?"*, *"chiến lược test"*, *"nên test gì"*.
 
 ### `testing-explorer` — v0.1.0
 
@@ -342,7 +345,7 @@ AIAgentSkills/
 │   ├── api-flow-debugger/
 │   ├── agent-debate-team/
 │   ├── testing-explorer/
-│   ├── testing-strategy/              ← v0.1.0 — testing strategy advisor
+│   ├── testing-strategy/              ← v0.1.2 — testing strategy advisor (scope + overlap)
 │   ├── agent-forge-team/              ← includes references/ticket-ingestion.md (v0.2.0)
 │   ├── skill-release/
 │   └── skill-to-local/
