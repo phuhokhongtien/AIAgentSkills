@@ -35,6 +35,10 @@ samples/**/.config/dotnet-tools.json
 # agent-debate-team: runtime session state + generated reports
 .agent-team/
 agent-debate-report-*.html
+agent-debate-team-extracted/
+
+# Scratch / planning docs (session artefacts, not part of the skill library)
+docs/
 
 # Temporary debug logs from api-flow-debugger
 server-debug*.log
