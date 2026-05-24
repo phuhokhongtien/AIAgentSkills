@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Testing Strategy — {{PROJECT_NAME}}</title>
+<style>
+:root {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface2: #21262d;
+  --border: #30363d;
+  --text: #e6edf3;
+  --text-muted: #8b949e;
+  --green: #3fb950;
+  --red: #f85149;
+  --yellow: #d29922;
+  --blue: #58a6ff;
+  --orange: #e3b341;
+  --purple: #bc8cff;
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --mono: 'Cascadia Code', 'Fira Code', 'Consolas', 'Monaco', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 14px; line-height: 1.6; }
+a { color: var(--blue); text-decoration: none; }
+
+/* Layout */
+.page { max-width: 1200px; margin: 0 auto; padding: 24px 16px 64px; }
+
+/* Header */
+.header { display: flex; align-items: center; gap: 16px; padding: 20px 24px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 24px; }
+.header-icon { font-size: 32px; }
+.header-title { font-size: 22px; font-weight: 700; }
+.header-sub { color: var(--text-muted); font-size: 13px; }
+.header-badges { display: flex; gap: 8px; margin-left: auto; flex-wrap: wrap; }
+.badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.badge-new { background: #1c3a2e; color: var(--green); border: 1px solid var(--green); }
+.badge-audit { background: #1a2a3f; color: var(--blue); border: 1px solid var(--blue); }
+.badge-focused { background: #2d2416; color: var(--orange); border: 1px solid var(--orange); }
+.badge-shape { background: var(--surface2); color: var(--text-muted); border: 1px solid var(--border); }
+
+/* Summary Cards */
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 24px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+.card-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
+.card-value { font-size: 20px; font-weight: 700; }
+.card-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+.val-green { color: var(--green); }
+.val-blue { color: var(--blue); }
+.val-yellow { color: var(--yellow); }
+.val-red { color: var(--red); }
+.val-purple { color: var(--purple); }
+
+/* Sections */
+.section { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 16px; overflow: hidden; }
+.section-header { display: flex; align-items: center; gap: 10px; padding: 14px 20px; cursor: pointer; user-select: none; border-bottom: 1px solid var(--border); font-weight: 600; font-size: 15px; }
+.section-header:hover { background: var(--surface2); }
+.section-toggle { color: var(--text-muted); font-size: 12px; margin-left: auto; transition: transform 0.2s; }
+.section-toggle.open { transform: rotate(90deg); }
+.section-body { padding: 20px; }
+.section-body.collapsed { display: none; }
+
+/* Testing Model */
+.model-wrap { display: flex; gap: 32px; align-items: flex-start; flex-wrap: wrap; }
+.model-svg-wrap { flex: 0 0 240px; }
+.model-rationale { flex: 1; min-width: 240px; }
+.model-rationale h4 { color: var(--text-muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; }
+.model-rationale p { color: var(--text); line-height: 1.7; }
+
+/* Test Type Cards */
+.test-types-grid { display: grid; gap: 12px; }
+.type-card { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--surface2); }
+.type-card-header { display: flex; align-items: center; gap: 10px; padding: 12px 16px; cursor: pointer; user-select: none; }
+.type-card-header:hover { background: rgba(255,255,255,0.03); }
+.type-card-body { padding: 16px; border-top: 1px solid var(--border); }
+.type-card-body.collapsed { display: none; }
+.badge-essential { background: #1c3a2e; color: var(--green); border: 1px solid var(--green); }
+.badge-recommended { background: #1a2a3f; color: var(--blue); border: 1px solid var(--blue); }
+.badge-optional { background: #2d2416; color: var(--yellow); border: 1px solid var(--yellow); }
+.badge-skip { background: var(--surface); color: var(--text-muted); border: 1px solid var(--border); }
+.type-name { font-weight: 600; font-size: 15px; }
+.type-state { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+.type-section { margin-top: 14px; }
+.type-section-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
+.tools-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.tool-pill { background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 2px 8px; font-size: 12px; font-family: var(--mono); color: var(--blue); }
+.rationale-text { color: var(--text-muted); line-height: 1.6; }
+.code-block { background: #010409; border: 1px solid var(--border); border-radius: 6px; padding: 14px 16px; font-family: var(--mono); font-size: 12px; overflow-x: auto; white-space: pre; color: #e6edf3; margin-top: 6px; line-height: 1.5; }
+.gherkin-block { background: #0a1628; border: 1px solid #1a3a5c; border-radius: 6px; padding: 14px 16px; font-family: var(--mono); font-size: 12px; overflow-x: auto; white-space: pre; color: #a8d8ea; margin-top: 6px; }
+.issues-list { list-style: none; }
+.issues-list li { padding: 4px 0; color: var(--text-muted); font-size: 13px; }
+.issues-list li::before { content: '⚠ '; color: var(--yellow); }
+
+/* Mocking per type table */
+.mock-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.mock-table th { background: var(--surface2); color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+.mock-table td { padding: 10px 12px; border-bottom: 1px solid #21262d; vertical-align: top; }
+.mock-table tr:last-child td { border-bottom: none; }
+.mock-table tr:hover td { background: rgba(255,255,255,0.02); }
+.mock-yes { color: var(--red); font-weight: 600; }
+.mock-no { color: var(--green); font-weight: 600; }
+.mock-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.mock-tag { background: #1a1a2e; border: 1px solid #30363d; border-radius: 3px; padding: 1px 6px; font-size: 11px; font-family: var(--mono); }
+
+/* Mocking Deep Dive */
+.school-indicator { display: flex; align-items: center; gap: 24px; padding: 16px 20px; background: var(--surface2); border-radius: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+.school-dial { position: relative; width: 120px; height: 60px; }
+.school-label { font-size: 13px; }
+.school-name { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+.school-rationale { color: var(--text-muted); font-size: 13px; }
+.antipattern-list { list-style: none; }
+.antipattern-list li { padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--text-muted); }
+.antipattern-list li:last-child { border-bottom: none; }
+.antipattern-list li::before { content: '✕ '; color: var(--red); }
+
+/* Overlap Analysis */
+.overlap-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+.overlap-tab { padding: 8px 18px; font-size: 13px; font-weight: 600; cursor: pointer; border: 1px solid transparent; border-bottom: none; border-radius: 6px 6px 0 0; color: var(--text-muted); background: transparent; transition: all 0.15s; }
+.overlap-tab:hover { color: var(--text); background: var(--surface2); }
+.overlap-tab.active { background: var(--surface2); color: var(--text); border-color: var(--border); border-bottom: 1px solid var(--surface2); margin-bottom: -1px; }
+.overlap-tab .tab-badge { display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 10px; font-size: 11px; font-weight: 700; background: var(--surface); }
+.overlap-tab.active .tab-badge-warn { background: rgba(248,81,73,0.15); color: var(--red); }
+.overlap-tab.active .tab-badge-ok { background: rgba(63,185,80,0.15); color: var(--green); }
+.overlap-pane { display: none; }
+.overlap-pane.active { display: block; }
+.overlap-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.overlap-table th { background: var(--surface2); color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+.overlap-table td { padding: 10px 12px; border-bottom: 1px solid #21262d; vertical-align: middle; }
+.overlap-table tr:last-child td { border-bottom: none; }
+.overlap-yes { color: var(--red); font-size: 16px; }
+.overlap-no { color: var(--text-muted); font-size: 13px; }
+.overlap-owner { color: var(--green); font-weight: 600; font-size: 12px; }
+.overlap-row-clean td { background: rgba(63,185,80,0.04); }
+.overlap-row-overlap td { background: rgba(248,81,73,0.04); }
+.overlap-reason { color: var(--text-muted); font-size: 12px; font-style: italic; }
+.dup-type { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+.dup-identical { background: rgba(248,81,73,0.15); color: var(--red); }
+.dup-near-identical { background: rgba(227,179,65,0.15); color: var(--orange); }
+.dup-subset { background: rgba(88,166,255,0.15); color: var(--blue); }
+.file-chip { display: inline-block; background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; font-size: 11px; font-family: var(--mono); margin: 2px 2px 2px 0; color: var(--text-muted); }
+.intra-rec { font-size: 12px; color: var(--text-muted); font-style: italic; }
+.type-pill { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; background: var(--surface2); color: var(--blue); border: 1px solid rgba(88,166,255,0.3); }
+
+/* Coverage */
+.coverage-gauge { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+.gauge-bar-wrap { flex: 1; height: 12px; background: var(--surface2); border-radius: 6px; overflow: hidden; }
+.gauge-bar { height: 100%; border-radius: 6px; background: linear-gradient(90deg, var(--green), var(--blue)); transition: width 0.8s ease; }
+.gauge-label { font-size: 16px; font-weight: 700; min-width: 60px; text-align: right; }
+.gap-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.gap-table th { background: var(--surface2); color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+.gap-table td { padding: 8px 12px; border-bottom: 1px solid #21262d; }
+.gap-table tr:last-child td { border-bottom: none; }
+.gap-covered { color: var(--green); }
+.gap-missing { color: var(--red); }
+
+/* Scope Impact Map */
+.scope-target-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; margin-bottom: 20px; display: flex; align-items: flex-start; gap: 20px; flex-wrap: wrap; }
+.scope-target-info { flex: 1; min-width: 200px; }
+.scope-target-name { font-size: 18px; font-weight: 700; font-family: var(--mono); color: var(--blue); margin-bottom: 4px; }
+.scope-target-file { font-size: 12px; color: var(--text-muted); font-family: var(--mono); margin-bottom: 8px; }
+.scope-target-meta { display: flex; gap: 8px; flex-wrap: wrap; }
+.scope-layer-badge { display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; background: rgba(88,166,255,0.12); color: var(--blue); border: 1px solid rgba(88,166,255,0.3); }
+.scope-boundary-badge { display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+.boundary-entry-point { background: rgba(188,140,255,0.12); color: var(--purple); border: 1px solid rgba(188,140,255,0.3); }
+.boundary-domain-core { background: rgba(63,185,80,0.12); color: var(--green); border: 1px solid rgba(63,185,80,0.3); }
+.boundary-adapter { background: rgba(227,179,65,0.12); color: var(--orange); border: 1px solid rgba(227,179,65,0.3); }
+.boundary-shared-utility { background: rgba(248,81,73,0.12); color: var(--red); border: 1px solid rgba(248,81,73,0.3); }
+.boundary-leaf-node { background: rgba(139,148,158,0.12); color: var(--text-muted); border: 1px solid var(--border); }
+.blast-badge { display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+.blast-low { background: rgba(63,185,80,0.12); color: var(--green); border: 1px solid rgba(63,185,80,0.3); }
+.blast-medium { background: rgba(227,179,65,0.12); color: var(--orange); border: 1px solid rgba(227,179,65,0.3); }
+.blast-high { background: rgba(248,81,73,0.12); color: var(--red); border: 1px solid rgba(248,81,73,0.3); }
+.scope-stats { display: flex; flex-direction: column; gap: 6px; }
+.scope-stat { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.scope-stat-label { color: var(--text-muted); min-width: 90px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+.scope-stat-value { font-weight: 700; }
+.scope-insight { background: rgba(88,166,255,0.07); border: 1px solid rgba(88,166,255,0.25); border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; font-size: 13px; color: var(--text); }
+.scope-insight::before { content: '💡 '; }
+.scope-call-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 20px; }
+.scope-call-table th { background: var(--surface2); color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+.scope-call-table td { padding: 9px 12px; border-bottom: 1px solid #21262d; vertical-align: middle; }
+.scope-call-table tr:last-child td { border-bottom: none; }
+.caller-entry-point td { background: rgba(188,140,255,0.04); }
+.callee-external td { background: rgba(248,81,73,0.03); }
+.call-type-pill { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 600; background: var(--surface2); color: var(--text-muted); border: 1px solid var(--border); }
+.mock-pill { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+.mock-yes { background: rgba(248,81,73,0.12); color: var(--red); border: 1px solid rgba(248,81,73,0.3); }
+.mock-no { background: rgba(63,185,80,0.12); color: var(--green); border: 1px solid rgba(63,185,80,0.3); }
+.mock-strategy-pill { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 11px; background: var(--surface2); color: var(--blue); border: 1px solid rgba(88,166,255,0.25); }
+.io-flag { color: var(--orange); font-size: 12px; font-weight: 700; }
+.scope-sub-heading { font-size: 13px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px; margin: 16px 0 8px; }
+.depth-badge { display: inline-block; width: 20px; height: 20px; border-radius: 50%; font-size: 11px; font-weight: 700; text-align: center; line-height: 20px; background: var(--surface2); color: var(--text-muted); border: 1px solid var(--border); }
+.depth-1 { background: rgba(88,166,255,0.15); color: var(--blue); border-color: rgba(88,166,255,0.4); }
+.depth-2 { background: var(--surface2); color: var(--text-muted); }
+
+/* CI Pipeline */
+.pipeline { display: flex; align-items: center; gap: 0; flex-wrap: wrap; margin: 8px 0 20px; }
+.pipe-stage { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; min-width: 140px; }
+.pipe-stage-name { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+.pipe-stage-trigger { font-size: 11px; color: var(--text-muted); }
+.pipe-stage-dur { font-size: 12px; font-family: var(--mono); margin-top: 4px; }
+.pipe-arrow { color: var(--text-muted); font-size: 20px; padding: 0 8px; }
+.pipe-green .pipe-stage-name { color: var(--green); }
+.pipe-blue .pipe-stage-name { color: var(--blue); }
+.pipe-yellow .pipe-stage-name { color: var(--yellow); }
+.pipe-purple .pipe-stage-name { color: var(--purple); }
+.pipe-tip { margin-top: 12px; padding: 10px 14px; background: var(--surface2); border-left: 3px solid var(--blue); border-radius: 0 6px 6px 0; font-size: 13px; color: var(--text-muted); }
+
+/* Priority Matrix */
+.matrix-wrap { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start; }
+.matrix-plot { position: relative; width: 340px; height: 280px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; flex-shrink: 0; }
+.matrix-axis-x { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); font-size: 11px; color: var(--text-muted); }
+.matrix-axis-y { position: absolute; top: 50%; left: 8px; transform: translateY(-50%) rotate(-90deg); font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+.matrix-quadrant { position: absolute; font-size: 10px; color: var(--text-muted); }
+.matrix-q-nw { top: 8px; left: 50px; color: var(--green); font-weight: 600; }
+.matrix-q-ne { top: 8px; right: 10px; color: var(--blue); font-weight: 600; }
+.matrix-q-sw { bottom: 24px; left: 50px; color: var(--text-muted); }
+.matrix-q-se { bottom: 24px; right: 10px; color: var(--red); }
+.matrix-mid-v { position: absolute; left: 50%; top: 20px; bottom: 20px; border-left: 1px dashed var(--border); }
+.matrix-mid-h { position: absolute; top: 50%; left: 20px; right: 20px; border-top: 1px dashed var(--border); }
+.matrix-dot { position: absolute; width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--surface2); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; cursor: pointer; transform: translate(-50%, -50%); transition: transform 0.15s; z-index: 1; }
+.matrix-dot:hover { transform: translate(-50%, -50%) scale(1.3); z-index: 10; }
+.dot-p0 { background: var(--green); color: #0d1117; }
+.dot-p1 { background: var(--blue); color: #0d1117; }
+.dot-p2 { background: var(--yellow); color: #0d1117; }
+.matrix-tooltip { display: none; position: absolute; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; font-size: 12px; max-width: 200px; z-index: 100; pointer-events: none; white-space: normal; line-height: 1.4; }
+.matrix-list { flex: 1; min-width: 260px; }
+
+/* Action Items */
+.action-list { display: grid; gap: 10px; }
+.action-item { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.action-item-header { display: flex; align-items: center; gap: 10px; padding: 12px 16px; cursor: pointer; user-select: none; background: var(--surface2); }
+.action-item-header:hover { background: rgba(255,255,255,0.04); }
+.action-item-body { padding: 14px 16px; border-top: 1px solid var(--border); }
+.action-item-body.collapsed { display: none; }
+.p-badge { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; font-family: var(--mono); }
+.p0 { background: #2d1a1a; color: var(--red); border: 1px solid var(--red); }
+.p1 { background: #1a2a3f; color: var(--blue); border: 1px solid var(--blue); }
+.p2 { background: var(--surface); color: var(--text-muted); border: 1px solid var(--border); }
+.action-title { font-weight: 600; }
+.action-desc { color: var(--text-muted); font-size: 13px; line-height: 1.6; margin-bottom: 10px; }
+
+/* Existing quality */
+.quality-bar { display: flex; gap: 12px; margin-bottom: 16px; }
+.quality-indicator { padding: 4px 14px; border-radius: 20px; font-weight: 600; font-size: 13px; }
+.quality-good { background: #1c3a2e; color: var(--green); border: 1px solid var(--green); }
+.quality-fair { background: #2d2416; color: var(--yellow); border: 1px solid var(--yellow); }
+.quality-poor { background: #2d1a1a; color: var(--red); border: 1px solid var(--red); }
+.positives-list { list-style: none; margin-bottom: 12px; }
+.positives-list li { padding: 3px 0; color: var(--text-muted); font-size: 13px; }
+.positives-list li::before { content: '✓ '; color: var(--green); }
+
+/* Divider */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 700px) { .two-col { grid-template-columns: 1fr; } }
+h4.sub-heading { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px; margin: 16px 0 8px; }
+.info-tip { padding: 10px 14px; background: var(--surface2); border-left: 3px solid var(--blue); border-radius: 0 6px 6px 0; font-size: 13px; color: var(--text-muted); margin-bottom: 16px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-icon">🧪</div>
+    <div>
+      <div class="header-title">Testing Strategy — {{PROJECT_NAME}}</div>
+      <div class="header-sub">Generated {{TIMESTAMP}} · {{STACK_LANGUAGE}} / {{STACK_FRAMEWORK}}</div>
+    </div>
+    <div class="header-badges">
+      <span class="badge badge-shape">{{PROJECT_SHAPE}}</span>
+      <span class="badge" id="mode-badge">{{MODE_LABEL}}</span>
+    </div>
+  </div>
+
+  <!-- Summary Cards (rendered by JS) -->
+  <div class="cards" id="summary-cards"></div>
+
+  <!-- Scope Impact Map (only when scope_analysis != null) -->
+  <div class="section" id="sec-scope-wrap" style="display:none">
+    <div class="section-header" onclick="toggleSection(this)">
+      🎯 Scope Impact Map
+      <span class="section-toggle open">▶</span>
+    </div>
+    <div class="section-body" id="sec-scope">
+      <!-- Target card (injected by JS) -->
+      <div id="scope-target-card-wrap"></div>
+      <!-- Key insight banner -->
+      <div class="scope-insight" id="scope-insight"></div>
+      <!-- Callers table -->
+      <div class="scope-sub-heading">⬆ Callers — Who calls this target?</div>
+      <table class="scope-call-table" id="callers-table">
+        <thead><tr>
+          <th>Caller</th>
+          <th>File</th>
+          <th>Layer</th>
+          <th>Call Type</th>
+          <th>Depth</th>
+        </tr></thead>
+        <tbody id="callers-body"></tbody>
+      </table>
+      <div id="callers-empty" style="display:none;padding:10px 0;color:var(--text-muted);font-size:13px">No direct callers found — may be an entry point or newly added code.</div>
+      <!-- Callees table -->
+      <div class="scope-sub-heading">⬇ Callees — What this target calls</div>
+      <table class="scope-call-table" id="callees-table">
+        <thead><tr>
+          <th>Dependency</th>
+          <th>File</th>
+          <th>Layer</th>
+          <th>External I/O</th>
+          <th>Mock?</th>
+          <th>Strategy</th>
+        </tr></thead>
+        <tbody id="callees-body"></tbody>
+      </table>
+      <div id="callees-empty" style="display:none;padding:10px 0;color:var(--text-muted);font-size:13px">No callees found — this appears to be a pure leaf function with no dependencies.</div>
+    </div>
+  </div>
+
+  <!-- Testing Model -->
+  <div class="section">
+    <div class="section-header" onclick="toggleSection(this)">
+      📐 Testing Model
+      <span class="section-toggle open">▶</span>
+    </div>
+    <div class="section-body" id="sec-model">
+      <div class="model-wrap">
+        <div class="model-svg-wrap">
+          <svg id="model-svg" width="240" height="200" viewBox="0 0 240 200"></svg>
+        </div>
+        <div class="model-rationale">
+          <h4>Recommended model</h4>
+          <p id="model-name" style="font-size:18px;font-weight:700;margin-bottom:8px;"></p>
+          <h4 style="margin-top:12px">Why this model?</h4>
+          <p id="model-rationale-text"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Test Types -->
+  <div class="section">
+    <div class="section-header" onclick="toggleSection(this)">
+      🔬 Test Types
+      <span class="section-toggle open">▶</span>
+    </div>
+    <div class="section-body" id="sec-types">
+      <div class="test-types-grid" id="test-types-container"></div>
+    </div>
+  </div>
+
+  <!-- Mocking per Test Type -->
+  <div class="section">
+    <div class="section-header" onclick="toggleSection(this)">
+      🎭 Mocking per Test Type
+      <span class="section-toggle open">▶</span>
+    </div>
+    <div class="section-body" id="sec-mock-table">
+      <div class="info-tip">This table shows what to mock and what NOT to mock in each test type for this project. Follow these rules to avoid brittle tests and meaningless coverage.</div>
+      <table class="mock-table" id="mock-per-type-table">
+        <thead>
+          <tr>
+            <th>Test Type</th>
+            <th>✅ Mock These</th>
+            <th>🚫 Don't Mock These</th>
+            <th>Why</th>
+          </tr>
+        </thead>
+        <tbody id="mock-table-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Mocking Deep-Dive -->
+  <div class="section">
+    <div class="section-header" onclick="toggleSection(this)">
+      🔧 Mocking Deep-Dive
+      <span class="section-toggle open">▶</span>
+    </div>
+    <div class="section-body" id="sec-mock-deep">
+      <div class="school-indicator">
+        <canvas id="school-canvas" width="120" height="60"></canvas>
+        <div>
+          <div class="school-name" id="school-name"></div>
+          <div class="school-label">School</div>
+        </div>
+        <div style="flex:1">
+          <div class="school-rationale" id="school-rationale"></div>
+        </div>
+      </div>
+      <div class="two-col">
+        <div>
+          <h4 class="sub-heading">Recommended Tools</h4>
+          <div class="tools-pills" id="mock-tools"></div>
+        </div>
+        <div>
+          <h4 class="sub-heading">Anti-Patterns to Avoid</h4>
+          <ul class="antipattern-list" id="antipatterns"></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Test Overlap Analysis (only if has_existing_tests) -->
+  <div class="section" id="sec-overlap-wrap" style="display:none">
+    <div class="section-header" onclick="toggleSection(this)">
+      ⚠️ Test Overlap Analysis
+      <span class="section-toggle open">▶</span>
+    </div>
+    <div class="section-body" id="sec-overlap">
+      <!-- Summary tip bar -->
+      <div class="info-tip" id="overlap-summary-tip"></div>
+
+      <!-- Tabs: Cross-Layer / Intra-Type -->
+      <div class="overlap-tabs">
+        <div class="overlap-tab active" id="tab-cross" onclick="switchOverlapTab('cross')">
+          Cross-Layer Overlaps
+          <span class="tab-badge tab-badge-warn" id="tab-cross-badge">0</span>
+        </div>
+        <div class="overlap-tab" id="tab-intra" onclick="switchOverlapTab('intra')">
+          Within-Type Duplicates
+          <span class="tab-badge tab-badge-warn" id="tab-intra-badge">0</span>
+        </div>
+      </div>
+
+      <!-- Pane 1: cross-layer -->
+      <div class="overlap-pane active" id="pane-cross">
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">
+          Behaviors tested redundantly at multiple layers — each row shows which types cover the same behavior and which layer should own it.
+        </p>
+        <table class="overlap-table" id="overlap-table">
+          <thead>
+            <tr>
+              <th>Behavior</th>
+              <th>Unit</th>
+              <th>Integration</th>
+              <th>API</th>
+              <th>UI/E2E</th>
+              <th>Automation</th>
+              <th>Owner</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="overlap-table-body"></tbody>
+        </table>
+        <div id="cross-empty" style="display:none;padding:20px;text-align:center;color:var(--green)">✅ No cross-layer overlaps detected — clean layer ownership.</div>
+      </div>
+
+      <!-- Pane 2: intra-type -->
+      <div class="overlap-pane" id="pane-intra">
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">
+          Duplicate tests within the same test type — multiple test files covering the exact same function, endpoint, or journey.
+        </p>
+        <table class="overlap-table" id="intra-table">
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>Behavior</th>
+              <th>Duplicate Files</th>
+              <th>Kind</th>
+              <th>Recommendation</th>
+            </tr>
+          </thead>
+          <tbody id="intra-table-body"></tbody>
+        </table>
+        <div id="intra-empty" style="display:none;padding:20px;text-align:center;color:var(--green)">✅ No within-type duplicates detected.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Coverage Analysis -->
+  <div class="section">
+    <div class="section-header" onclick="toggleSection(this)">
+      📊 Coverage Analysis
+      <span class="section-toggle open">▶</span>
+    </div>
+    <div class="section-body" id="sec-coverage">
+      <h4 class="sub-heading">Overall Estimate</h4>
+      <div class="coverage-gauge">
+        <div class="gauge-bar-wrap"><div class="gauge-bar" id="coverage-bar" style="width:0%"></div></div>
+        <div class="gauge-label" id="coverage-label"></div>
+      </div>
+      <div class="two-col" style="margin-bottom:16px">
+        <div>
+          <h4 class="sub-heading">Targets</h4>
+          <table class="gap-table" id="coverage-targets-table">
+            <thead><tr><th>Layer</th><th>Target</th></tr></thead>
+            <tbody id="coverage-targets-body"></tbody>
+          </table>
+        </div>
+        <div id="existing-quality-section" style="display:none">
+          <h4 class="sub-heading">Existing Test Quality</h4>
+          <div class="quality-bar"><span class="quality-indicator" id="quality-badge"></span></div>
+          <ul class="positives-list" id="quality-positives"></ul>
+          <ul class="issues-list" id="quality-issues"></ul>
+        </div>
+      </div>
+      <h4 class="sub-heading">Coverage Gaps</h4>
+      <table class="gap-table">
+        <thead><tr><th>Area / File</th><th>Status</th></tr></thead>
+        <tbody id="gap-table-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- CI/CD Integration -->
+  <div class="section">
+    <div class="section-header" onclick="toggleSection(this)">
+      🚀 CI/CD Integration
+      <span class="section-toggle open">▶</span>
+    </div>
+    <div class="section-body collapsed" id="sec-ci">
+      <div class="pipeline" id="ci-pipeline"></div>
+      <div class="pipe-tip" id="ci-tip"></div>
+    </div>
+  </div>
+
+  <!-- Priority Matrix -->
+  <div class="section">
+    <div class="section-header" onclick="toggleSection(this)">
+      🎯 Priority Matrix
+      <span class="section-toggle open">▶</span>
+    </div>
+    <div class="section-body" id="sec-matrix">
+      <div class="matrix-wrap">
+        <div class="matrix-plot" id="matrix-plot">
+          <div class="matrix-mid-v"></div>
+          <div class="matrix-mid-h"></div>
+          <div class="matrix-quadrant matrix-q-nw">⚡ Quick Wins</div>
+          <div class="matrix-quadrant matrix-q-ne">🎯 Strategic</div>
+          <div class="matrix-quadrant matrix-q-sw">📋 Fill-in</div>
+          <div class="matrix-quadrant matrix-q-se">❌ Avoid</div>
+          <div class="matrix-axis-x">← Low Effort · High Effort →</div>
+          <div class="matrix-axis-y">↑ High Impact</div>
+          <div class="matrix-tooltip" id="matrix-tooltip"></div>
+        </div>
+        <div class="matrix-list">
+          <h4 class="sub-heading">All Action Items</h4>
+          <div id="matrix-legend"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Action Items -->
+  <div class="section">
+    <div class="section-header" onclick="toggleSection(this)">
+      ✅ Action Items
+      <span class="section-toggle open">▶</span>
+    </div>
+    <div class="section-body" id="sec-actions">
+      <div class="action-list" id="action-list"></div>
+    </div>
+  </div>
+
+</div><!-- .page -->
+
+<script>
+const reportData = {{REPORT_JSON}};
+
+// ── Utilities ──────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function toggleSection(header) {
+  const body = header.nextElementSibling;
+  const arrow = header.querySelector('.section-toggle');
+  const collapsed = body.classList.toggle('collapsed');
+  arrow.classList.toggle('open', !collapsed);
+}
+
+// ── Mode Badge ─────────────────────────────────────────────────────────────
+(function() {
+  const el = document.getElementById('mode-badge');
+  const m = reportData.intake.mode;
+  el.className = 'badge ' + (m==='new-strategy'?'badge-new': m==='audit'?'badge-audit':'badge-focused');
+})();
+
+// ── Summary Cards ──────────────────────────────────────────────────────────
+(function() {
+  const d = reportData;
+  const oa = d.overlap_analysis;
+  const crossCount = oa ? (oa.cross_layer_count !== undefined ? oa.cross_layer_count
+    : oa.candidates.filter(c => Object.values(c.covered_by).filter(Boolean).length > 1).length) : 0;
+  const intraCount = oa ? (oa.intra_type_count !== undefined ? oa.intra_type_count
+    : (oa.intra_type_overlaps||[]).length) : 0;
+  const overlapCount = crossCount + intraCount;
+
+  const cards = [
+    { label:'Testing Model', value: d.testing_model.charAt(0).toUpperCase()+d.testing_model.slice(1), cls:'val-blue', sub: d.project_shape },
+    { label:'Test Files', value: d.stack.test_file_count, cls: d.stack.test_file_count>0?'val-green':'val-red', sub: d.stack.has_existing_tests?'existing tests':'no tests yet' },
+    { label:'Test Types', value: d.test_types.filter(t=>t.recommendation!=='skip').length, cls:'val-green', sub:'recommended/essential' },
+    { label:'Overlap Issues', value: overlapCount, cls: overlapCount>0?'val-red':'val-green', sub: overlapCount>0?`${crossCount} cross-layer · ${intraCount} within-type`:'no redundancy detected' },
+    { label:'Coverage Est.', value: d.coverage.overall_estimate, cls:'val-yellow', sub:'current estimate' },
+    { label:'CI', value: d.ci_plan.current_ci||'None detected', cls: d.ci_plan.current_has_tests?'val-green':'val-yellow', sub: d.ci_plan.current_has_tests?'test step found':'no test step' },
+  ];
+
+  const wrap = document.getElementById('summary-cards');
+  cards.forEach(c => {
+    wrap.innerHTML += `<div class="card">
+      <div class="card-label">${esc(c.label)}</div>
+      <div class="card-value ${c.cls}">${esc(c.value)}</div>
+      <div class="card-sub">${esc(c.sub)}</div>
+    </div>`;
+  });
+})();
+
+// ── Scope Impact Map ───────────────────────────────────────────────────────
+(function() {
+  const sa = reportData.scope_analysis;
+  if (!sa || !sa.target) return;
+  document.getElementById('sec-scope-wrap').style.display = '';
+
+  const t = sa.target;
+  // Boundary badge class
+  const boundaryCls = {
+    'entry-point': 'boundary-entry-point',
+    'domain-core': 'boundary-domain-core',
+    'adapter': 'boundary-adapter',
+    'shared-utility': 'boundary-shared-utility',
+    'leaf-node': 'boundary-leaf-node'
+  }[t.boundary_classification] || 'boundary-leaf-node';
+  const blastCls = { 'low': 'blast-low', 'medium': 'blast-medium', 'high': 'blast-high' }[t.blast_radius] || 'blast-medium';
+
+  // Target info card
+  document.getElementById('scope-target-card-wrap').innerHTML = `
+    <div class="scope-target-card">
+      <div class="scope-target-info">
+        <div class="scope-target-name">${esc(t.name)}</div>
+        <div class="scope-target-file">${esc(t.file||'')}</div>
+        ${t.signature ? `<div style="font-size:12px;color:var(--text-muted);font-family:var(--mono);margin-bottom:8px">${esc(t.signature)}</div>` : ''}
+        <div class="scope-target-meta">
+          <span class="scope-layer-badge">${esc(t.layer||'unknown')}</span>
+          <span class="scope-boundary-badge ${boundaryCls}">${esc((t.boundary_classification||'').replace(/-/g,' '))}</span>
+          <span class="blast-badge ${blastCls}">Blast: ${esc(t.blast_radius||'?')}</span>
+        </div>
+      </div>
+      <div class="scope-stats">
+        <div class="scope-stat"><span class="scope-stat-label">Callers</span><span class="scope-stat-value">${sa.caller_count ?? (sa.callers||[]).length}</span></div>
+        <div class="scope-stat"><span class="scope-stat-label">Callees</span><span class="scope-stat-value">${sa.callee_count ?? (sa.callees||[]).length}</span></div>
+        <div class="scope-stat"><span class="scope-stat-label">External I/O</span><span class="scope-stat-value" style="color:${(sa.external_io_count||0)>0?'var(--orange)':'var(--green)'}">${sa.external_io_count||0}</span></div>
+        <div class="scope-stat"><span class="scope-stat-label">Mock needed</span><span class="scope-stat-value" style="color:${(sa.mock_needed_count||0)>0?'var(--red)':'var(--green)'}">${sa.mock_needed_count||0}</span></div>
+      </div>
+    </div>`;
+
+  // Key insight
+  const insightEl = document.getElementById('scope-insight');
+  insightEl.textContent = t.key_insight || sa.recommended_test_entry_point || '';
+  if (!insightEl.textContent) insightEl.style.display = 'none';
+
+  // Callers table
+  const callers = sa.callers || [];
+  if (callers.length === 0) {
+    document.getElementById('callers-table').style.display = 'none';
+    document.getElementById('callers-empty').style.display = '';
+  } else {
+    const cb = document.getElementById('callers-body');
+    callers.forEach(c => {
+      const isEntry = c.layer === 'controller' || c.layer === 'cli' || c.call_type === 'queue-consumer' || c.call_type === 'event-trigger';
+      cb.innerHTML += `<tr class="${isEntry?'caller-entry-point':''}">
+        <td><strong>${esc(c.name)}</strong></td>
+        <td style="font-size:12px;font-family:var(--mono);color:var(--text-muted)">${esc(c.file||'—')}</td>
+        <td><span class="scope-layer-badge">${esc(c.layer||'?')}</span></td>
+        <td><span class="call-type-pill">${esc((c.call_type||'direct-call').replace(/-/g,' '))}</span></td>
+        <td><span class="depth-badge depth-${c.distance||1}">${c.distance||1}</span></td>
+      </tr>`;
+    });
+  }
+
+  // Callees table
+  const callees = sa.callees || [];
+  if (callees.length === 0) {
+    document.getElementById('callees-table').style.display = 'none';
+    document.getElementById('callees-empty').style.display = '';
+  } else {
+    const db = document.getElementById('callees-body');
+    callees.forEach(d => {
+      db.innerHTML += `<tr class="${d.is_external_io?'callee-external':''}">
+        <td><strong>${esc(d.name)}</strong></td>
+        <td style="font-size:12px;font-family:var(--mono);color:var(--text-muted)">${esc(d.file||'—')}</td>
+        <td><span class="scope-layer-badge">${esc(d.layer||'?')}</span></td>
+        <td>${d.is_external_io ? '<span class="io-flag">⚡ I/O</span>' : '<span style="color:var(--text-muted)">—</span>'}</td>
+        <td>${d.mock_needed ? '<span class="mock-pill mock-yes">Mock</span>' : '<span class="mock-pill mock-no">Real</span>'}</td>
+        <td>${d.mock_strategy ? `<span class="mock-strategy-pill">${esc(d.mock_strategy)}</span>` : '—'}</td>
+      </tr>`;
+    });
+  }
+})();
+
+// ── Testing Model SVG ──────────────────────────────────────────────────────
+(function() {
+  const model = reportData.testing_model;
+  const svg = document.getElementById('model-svg');
+  const colors = { green:'#3fb950', blue:'#58a6ff', yellow:'#d29922', purple:'#bc8cff', muted:'#30363d' };
+
+  if (model === 'pyramid') {
+    const layers = [
+      { label:'E2E', pct:0.15, color:colors.yellow, y:0 },
+      { label:'Integration', pct:0.30, color:colors.blue, y:0 },
+      { label:'Unit Tests', pct:0.55, color:colors.green, y:0 },
+    ];
+    let curY = 20;
+    layers.forEach(l => {
+      const h = l.pct * 160;
+      const widthPct = 0.2 + l.pct * 0.8;
+      const w = widthPct * 200;
+      const x = (240 - w) / 2;
+      svg.innerHTML += `<rect x="${x}" y="${curY}" width="${w}" height="${h-2}" rx="3" fill="${l.color}" opacity="0.85"/>
+        <text x="120" y="${curY + h/2 + 5}" text-anchor="middle" fill="#0d1117" font-size="12" font-weight="700">${l.label}</text>`;
+      curY += h;
+    });
+  } else if (model === 'trophy') {
+    const layers = [
+      { label:'E2E', pct:0.12, color:colors.yellow },
+      { label:'Integration', pct:0.50, color:colors.blue },
+      { label:'Static / Types', pct:0.20, color:colors.purple },
+      { label:'Unit', pct:0.18, color:colors.green },
+    ];
+    let curY = 10;
+    layers.forEach(l => {
+      const h = l.pct * 170;
+      svg.innerHTML += `<rect x="20" y="${curY}" width="200" height="${h-2}" rx="3" fill="${l.color}" opacity="0.85"/>
+        <text x="120" y="${curY + h/2 + 5}" text-anchor="middle" fill="#0d1117" font-size="12" font-weight="700">${l.label}</text>`;
+      curY += h;
+    });
+  } else {
+    // Honeycomb — 3 hexagons
+    const hx = (cx, cy, r, color, label) => {
+      const pts = [];
+      for (let i=0;i<6;i++) { const a = Math.PI/180*(60*i-30); pts.push(`${cx+r*Math.cos(a)},${cy+r*Math.sin(a)}`); }
+      return `<polygon points="${pts.join(' ')}" fill="${color}" opacity="0.75" stroke="#21262d" stroke-width="1"/>
+        <text x="${cx}" y="${cy+5}" text-anchor="middle" fill="#0d1117" font-size="10" font-weight="700">${label}</text>`;
+    };
+    svg.innerHTML += hx(60, 100, 48, colors.blue, 'Service A') + hx(120, 60, 48, colors.green, 'Service B') + hx(180, 100, 48, colors.purple, 'Service C');
+    svg.innerHTML += `<line x1="108" y1="100" x2="120" y2="108" stroke="#30363d" stroke-width="1.5" stroke-dasharray="4"/>
+      <line x1="132" y1="100" x2="120" y2="108" stroke="#30363d" stroke-width="1.5" stroke-dasharray="4"/>`;
+    svg.innerHTML += `<text x="120" y="190" text-anchor="middle" fill="#8b949e" font-size="11">Integration-first per service</text>`;
+  }
+
+  const nameMap = { pyramid: 'Test Pyramid', trophy: 'Test Trophy', honeycomb: 'Honeycomb' };
+  document.getElementById('model-name').textContent = nameMap[model] || model;
+  document.getElementById('model-rationale-text').textContent = reportData.testing_model_rationale;
+})();
+
+// ── Test Type Cards ────────────────────────────────────────────────────────
+(function() {
+  const container = document.getElementById('test-types-container');
+  reportData.test_types.forEach((t, idx) => {
+    const badgeClass = 'badge-' + t.recommendation;
+    const stateColor = { none:'val-red', minimal:'val-yellow', adequate:'val-blue', good:'val-green' }[t.current_state] || '';
+    const issuesHtml = t.current_state_issues && t.current_state_issues.length
+      ? `<div class="type-section"><div class="type-section-label">Issues Found</div><ul class="issues-list">${t.current_state_issues.map(i=>`<li>${esc(i)}</li>`).join('')}</ul></div>` : '';
+    const snippetHtml = t.type === 'bdd' && t.bdd_scenario
+      ? `<div class="type-section"><div class="type-section-label">Gherkin Example</div><div class="gherkin-block">${esc(t.bdd_scenario)}</div></div>`
+      : (t.example_snippet ? `<div class="type-section"><div class="type-section-label">Code Example</div><div class="code-block">${esc(t.example_snippet)}</div></div>` : '');
+
+    container.innerHTML += `
+      <div class="type-card">
+        <div class="type-card-header" onclick="this.nextElementSibling.classList.toggle('collapsed');this.querySelector('.section-toggle').classList.toggle('open')">
+          <span class="badge ${badgeClass}">${esc(t.recommendation)}</span>
+          <span class="type-name">${esc(t.label)}</span>
+          ${t.coverage_target ? `<span class="type-state">Target: ${esc(t.coverage_target)}</span>` : `<span class="type-state ${stateColor}">${esc(t.current_state || '')}</span>`}
+          <span class="section-toggle open">▶</span>
+        </div>
+        <div class="type-card-body">
+          <div class="type-section">
+            <div class="type-section-label">Rationale</div>
+            <div class="rationale-text">${esc(t.rationale)}</div>
+          </div>
+          <div class="type-section">
+            <div class="type-section-label">Recommended Tools</div>
+            <div class="tools-pills">${(t.recommended_tools||[]).map(tool=>`<span class="tool-pill">${esc(tool)}</span>`).join('')}</div>
+          </div>
+          ${issuesHtml}
+          ${snippetHtml}
+        </div>
+      </div>`;
+  });
+})();
+
+// ── Mocking per Test Type Table ────────────────────────────────────────────
+(function() {
+  const tbody = document.getElementById('mock-table-body');
+  (reportData.mocking.per_type || []).forEach(row => {
+    const mockTags = (row.mock||[]).map(m=>`<span class="mock-tag">${esc(m)}</span>`).join('');
+    const noMockTags = (row.dont_mock||[]).map(m=>`<span class="mock-tag">${esc(m)}</span>`).join('');
+    tbody.innerHTML += `<tr>
+      <td><strong>${esc(row.test_type)}</strong></td>
+      <td><div class="mock-tags">${mockTags || '<span style="color:var(--text-muted)">—</span>'}</div></td>
+      <td><div class="mock-tags">${noMockTags || '<span style="color:var(--text-muted)">—</span>'}</div></td>
+      <td class="rationale-text" style="font-size:12px">${esc(row.key_reason||'')}</td>
+    </tr>`;
+  });
+})();
+
+// ── Mocking Deep-Dive ──────────────────────────────────────────────────────
+(function() {
+  const m = reportData.mocking;
+  const schoolColors = { london:'#f85149', detroit:'#3fb950', mixed:'#58a6ff' };
+  const schoolLabels = { london:'London / Mockist', detroit:'Detroit / Chicago Classicist', mixed:'Mixed / Pragmatic' };
+  document.getElementById('school-name').textContent = schoolLabels[m.school] || m.school;
+  document.getElementById('school-name').style.color = schoolColors[m.school] || '#e6edf3';
+  document.getElementById('school-rationale').textContent = m.school_rationale || '';
+
+  // Canvas dial
+  const canvas = document.getElementById('school-canvas');
+  const ctx = canvas.getContext('2d');
+  const pos = m.school === 'london' ? 0.85 : m.school === 'detroit' ? 0.15 : 0.5;
+  ctx.strokeStyle = '#30363d'; ctx.lineWidth = 6; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.arc(60, 50, 40, Math.PI, 0); ctx.stroke();
+  ctx.strokeStyle = schoolColors[m.school] || '#58a6ff'; ctx.lineWidth = 6;
+  const startAngle = Math.PI; const endAngle = Math.PI + pos * Math.PI;
+  ctx.beginPath(); ctx.arc(60, 50, 40, startAngle, endAngle); ctx.stroke();
+  ctx.fillStyle = '#e6edf3'; ctx.font = '9px sans-serif'; ctx.textAlign = 'left';
+  ctx.fillText('Detroit', 14, 58); ctx.textAlign = 'right'; ctx.fillText('London', 106, 58);
+
+  const toolsWrap = document.getElementById('mock-tools');
+  (m.recommended_tools||[]).forEach(t => { toolsWrap.innerHTML += `<span class="tool-pill">${esc(t)}</span>`; });
+
+  const apList = document.getElementById('antipatterns');
+  (m.anti_patterns||[]).forEach(ap => { apList.innerHTML += `<li>${esc(ap)}</li>`; });
+})();
+
+// ── Overlap tab switcher ───────────────────────────────────────────────────
+function switchOverlapTab(name) {
+  ['cross','intra'].forEach(t => {
+    document.getElementById('tab-'+t).classList.toggle('active', t===name);
+    document.getElementById('pane-'+t).classList.toggle('active', t===name);
+  });
+}
+
+// ── Overlap Analysis ───────────────────────────────────────────────────────
+(function() {
+  if (!reportData.stack.has_existing_tests || !reportData.overlap_analysis) return;
+  document.getElementById('sec-overlap-wrap').style.display = '';
+  const oa = reportData.overlap_analysis;
+
+  // ── Cross-layer overlaps ──
+  const crossCandidates = (oa.candidates||[]).filter(c => Object.values(c.covered_by).filter(Boolean).length > 1);
+  const crossCount = oa.cross_layer_count !== undefined ? oa.cross_layer_count : crossCandidates.length;
+  const intraItems = oa.intra_type_overlaps || [];
+  const intraCount = oa.intra_type_count !== undefined ? oa.intra_type_count : intraItems.length;
+  const totalCount = crossCount + intraCount;
+
+  // Summary tip
+  const tip = document.getElementById('overlap-summary-tip');
+  if (totalCount === 0) {
+    tip.textContent = 'No overlaps detected — test coverage is clean across all types and layers. ✅';
+  } else {
+    tip.innerHTML = `<strong>${totalCount} overlap issue(s) found:</strong> `
+      + (crossCount > 0 ? `<span style="color:var(--red)">${crossCount} cross-layer</span>` : '<span style="color:var(--green)">0 cross-layer</span>')
+      + ' &nbsp;·&nbsp; '
+      + (intraCount > 0 ? `<span style="color:var(--orange)">${intraCount} within-type duplicate(s)</span>` : '<span style="color:var(--green)">0 within-type</span>')
+      + '. Fix these to keep your test suite lean and maintainable.';
+  }
+
+  // Tab badges
+  const crossBadge = document.getElementById('tab-cross-badge');
+  const intraBadge = document.getElementById('tab-intra-badge');
+  crossBadge.textContent = crossCount;
+  intraBadge.textContent = intraCount;
+  if (crossCount === 0) crossBadge.className = 'tab-badge tab-badge-ok';
+  if (intraCount === 0) intraBadge.className = 'tab-badge tab-badge-ok';
+
+  // ── Pane 1: cross-layer table ──
+  const tbody = document.getElementById('overlap-table-body');
+  if ((oa.candidates||[]).length === 0) {
+    document.getElementById('cross-empty').style.display = '';
+    document.getElementById('overlap-table').style.display = 'none';
+  } else {
+    oa.candidates.forEach(c => {
+      const layers = ['unit','integration','api','ui','automation'];
+      const covered = layers.map(l => c.covered_by[l]);
+      const hasOverlap = covered.filter(Boolean).length > 1;
+      const rowClass = hasOverlap ? 'overlap-row-overlap' : 'overlap-row-clean';
+      const cells = layers.map(l => {
+        const on = c.covered_by[l];
+        const isOwner = c.recommended_owner === l;
+        if (on && isOwner) return `<td><span style="color:var(--green);font-weight:700">✅ owns</span></td>`;
+        if (on && !isOwner) return `<td><span class="overlap-yes">⚠ dup</span></td>`;
+        return `<td><span class="overlap-no">—</span></td>`;
+      }).join('');
+      tbody.innerHTML += `<tr class="${rowClass}">
+        <td><strong>${esc(c.behavior)}</strong><div class="overlap-reason">${esc(c.reason||'')}</div></td>
+        ${cells}
+        <td><span class="overlap-owner">${esc(c.recommended_owner)}</span></td>
+        <td style="font-size:12px;color:var(--text-muted)">Remove dup from other layers</td>
+      </tr>`;
+    });
+  }
+
+  // ── Pane 2: intra-type table ──
+  const intraBody = document.getElementById('intra-table-body');
+  if (intraItems.length === 0) {
+    document.getElementById('intra-empty').style.display = '';
+    document.getElementById('intra-table').style.display = 'none';
+  } else {
+    const dupCls = { 'identical': 'dup-identical', 'near-identical': 'dup-near-identical', 'subset': 'dup-subset' };
+    intraItems.forEach(it => {
+      const cls = dupCls[it.duplication_type] || 'dup-near-identical';
+      const filesHtml = (it.test_files||[]).map(f => `<span class="file-chip">${esc(f)}</span>`).join('');
+      intraBody.innerHTML += `<tr class="overlap-row-overlap">
+        <td><span class="type-pill">${esc(it.test_type)}</span></td>
+        <td><strong>${esc(it.behavior)}</strong></td>
+        <td style="max-width:260px">${filesHtml}</td>
+        <td><span class="dup-type ${cls}">${esc(it.duplication_type||'?')}</span></td>
+        <td class="intra-rec">${esc(it.recommendation||'')}</td>
+      </tr>`;
+    });
+  }
+})();
+
+// ── Coverage Analysis ──────────────────────────────────────────────────────
+(function() {
+  const cov = reportData.coverage;
+  const pctMap = { '0-20%':10, '20-40%':30, '40-60%':50, '60-80%':70, '80%+':85 };
+  const pct = pctMap[cov.overall_estimate] || 50;
+  document.getElementById('coverage-bar').style.width = pct + '%';
+  document.getElementById('coverage-label').textContent = cov.overall_estimate;
+
+  const tBody = document.getElementById('coverage-targets-body');
+  Object.entries(cov.targets||{}).forEach(([k,v]) => {
+    tBody.innerHTML += `<tr><td>${esc(k)}</td><td style="color:var(--blue)">${esc(v)}</td></tr>`;
+  });
+
+  if (reportData.existing_quality && reportData.stack.has_existing_tests) {
+    document.getElementById('existing-quality-section').style.display = '';
+    const q = reportData.existing_quality;
+    const badge = document.getElementById('quality-badge');
+    badge.textContent = q.rating.charAt(0).toUpperCase() + q.rating.slice(1);
+    badge.className = 'quality-indicator quality-' + q.rating;
+    const pos = document.getElementById('quality-positives');
+    (q.positives||[]).forEach(p => { pos.innerHTML += `<li>${esc(p)}</li>`; });
+    const iss = document.getElementById('quality-issues');
+    (q.issues||[]).forEach(i => { iss.innerHTML += `<li>${esc(i)}</li>`; });
+  }
+
+  const gBody = document.getElementById('gap-table-body');
+  (cov.gaps||[]).forEach(g => {
+    gBody.innerHTML += `<tr>
+      <td><span style="font-family:var(--mono);font-size:12px">${esc(g.file||g.area)}</span></td>
+      <td>${g.has_test ? '<span class="gap-covered">✅ Covered</span>' : '<span class="gap-missing">❌ No tests</span>'}</td>
+    </tr>`;
+  });
+})();
+
+// ── CI Pipeline ────────────────────────────────────────────────────────────
+(function() {
+  const ci = reportData.ci_plan;
+  const pipe = document.getElementById('ci-pipeline');
+  ci.stages.forEach((s, i) => {
+    if (i > 0) pipe.innerHTML += `<div class="pipe-arrow">▶</div>`;
+    pipe.innerHTML += `<div class="pipe-stage pipe-${s.color}">
+      <div class="pipe-stage-name">${esc(s.name)}</div>
+      <div class="pipe-stage-trigger">${esc(s.trigger)}</div>
+      <div class="pipe-stage-dur">${esc(s.duration)}</div>
+    </div>`;
+  });
+  document.getElementById('ci-tip').textContent = ci.parallelism_tip || '';
+})();
+
+// ── Priority Matrix ────────────────────────────────────────────────────────
+(function() {
+  const items = reportData.priority_matrix || [];
+  const plot = document.getElementById('matrix-plot');
+  const tooltip = document.getElementById('matrix-tooltip');
+  const legend = document.getElementById('matrix-legend');
+  const effortX = { low: 0.2, medium: 0.5, high: 0.8 };
+  const impactY = { low: 0.8, medium: 0.5, high: 0.2 };
+
+  items.forEach((item, idx) => {
+    const x = (effortX[item.effort] || 0.5) * 300 + 20;
+    const y = (impactY[item.impact] || 0.5) * 240 + 20;
+    const cls = 'dot-' + (item.priority||'p2').toLowerCase();
+    const dot = document.createElement('div');
+    dot.className = `matrix-dot ${cls}`;
+    dot.style.left = x + 'px'; dot.style.top = y + 'px';
+    dot.textContent = idx + 1;
+    dot.addEventListener('mouseenter', e => {
+      tooltip.style.display = 'block';
+      tooltip.style.left = (x + 20) + 'px'; tooltip.style.top = (y - 20) + 'px';
+      tooltip.innerHTML = `<strong>${esc(item.title)}</strong><br><span style="color:var(--text-muted)">${esc(item.description||'')}</span>`;
+    });
+    dot.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+    plot.appendChild(dot);
+
+    const pCls = (item.priority||'p2').toLowerCase();
+    legend.innerHTML += `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
+      <span class="p-badge ${pCls}">${esc(item.priority||'P2')}</span>
+      <span style="font-size:13px">${idx+1}. ${esc(item.title)}</span>
+    </div>`;
+  });
+})();
+
+// ── Action Items ───────────────────────────────────────────────────────────
+(function() {
+  const list = document.getElementById('action-list');
+  (reportData.action_items || []).forEach(a => {
+    const pCls = (a.priority||'P2').toLowerCase();
+    const codeHtml = a.example ? `<div class="code-block">${esc(a.example)}</div>` : '';
+    list.innerHTML += `
+      <div class="action-item">
+        <div class="action-item-header" onclick="this.nextElementSibling.classList.toggle('collapsed')">
+          <span class="p-badge ${pCls}">${esc(a.priority)}</span>
+          <span class="action-title">${esc(a.title)}</span>
+        </div>
+        <div class="action-item-body">
+          <div class="action-desc">${esc(a.description)}</div>
+          ${codeHtml}
+        </div>
+      </div>`;
+  });
+})();
+</script>
+</body>
+</html>
