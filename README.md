@@ -25,7 +25,7 @@ Debug any API endpoint by tracing the full request flow — from curl to respons
 - **Precise log parsing**: ANSI-stripping pre-processor → canonical clean log; anchored per-framework patterns replace naive `grep SELECT|INSERT` (eliminates false positives from stack traces and JSON request bodies); ripgrep multiline for multi-line query blocks
 - **Rich DB Queries dashboard**: interactive table with expandable rows, CSS-only SQL syntax highlight, filter (All / Slow / N+1), sort, search, copy-SQL button, timeline strip, N+1 shape-group color coding
 
-### `testing-strategy` — v0.1.0
+### `testing-strategy` — v0.1.1
 
 A **Testing Strategist** that analyzes your project's codebase and produces a project-specific testing strategy — covering unit, integration, API, UI/E2E, load, performance, automation, and BDD. Generates an interactive dark-theme HTML report with a test pyramid/trophy visualization, overlap detection, mocking guidance, and a prioritized action list.
 
@@ -390,6 +390,17 @@ AIAgentSkills/
 ---
 
 ## Release Notes
+
+### 2026-05-24 — `testing-strategy` v0.1.1 — intra-type overlap detection
+
+- **Intra-type duplicate detection**: Phase 3 Step 4 now measures overlap **within the same test type**, not just across layers — detects when multiple unit test files cover the same function, multiple integration tests hit the same endpoint identically, or multiple E2E tests repeat the same user journey
+- **Duplication classification**: each intra-type duplicate is classified as `identical` / `near-identical` / `subset`, with a concrete consolidation recommendation (e.g., "parameterize into a data-driven table" or "extract login to a shared fixture")
+- **Two-tab Overlap Analysis section**: HTML report now has separate tabs — **Cross-Layer Overlaps** (previous behavior) and **Within-Type Duplicates** (new) — each with its own count badge and table
+- **Smarter summary card**: Overlap Issues card now shows both counts (`N cross-layer · M within-type`) instead of a single number
+- **Updated JSON schema**: `overlap_analysis` now includes `cross_layer_count`, `intra_type_count`, and `intra_type_overlaps[]` (with `test_type`, `behavior`, `test_files[]`, `duplication_type`, `recommendation`)
+- **Phase 6 chat summary**: prints both counts inline (`N cross-layer · M within-type`)
+
+---
 
 ### 2026-05-24 — `testing-strategy` v0.1.0 (initial release)
 

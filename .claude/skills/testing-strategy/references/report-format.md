@@ -57,7 +57,9 @@ The `strategy` object injected as `reportData` in the HTML template.
   },
   "overlap_analysis": {
     "has_overlaps": true,
-    "candidates": [
+    "cross_layer_count": 2,                   // number of cross-layer overlap candidates
+    "intra_type_count": 3,                    // number of within-type duplicate groups
+    "candidates": [                           // cross-layer overlaps
       {
         "behavior": "Order creation validation",
         "covered_by": {
@@ -69,6 +71,22 @@ The `strategy` object injected as `reportData` in the HTML template.
         },
         "recommended_owner": "integration",
         "reason": "Logic is a pass-through service — integration test covers end-to-end without needing isolated unit"
+      }
+    ],
+    "intra_type_overlaps": [                  // within-type duplicates
+      {
+        "test_type": "unit",                  // "unit"|"integration"|"api"|"e2e"|"automation"|"bdd"
+        "behavior": "validateOrder() happy path",
+        "test_files": ["tests/order.test.ts", "tests/checkout.test.ts"],
+        "duplication_type": "identical",      // "identical"|"near-identical"|"subset"
+        "recommendation": "Consolidate into order.test.ts — delete duplicate in checkout.test.ts"
+      },
+      {
+        "test_type": "e2e",
+        "behavior": "User login journey",
+        "test_files": ["e2e/auth.spec.ts", "e2e/checkout.spec.ts", "e2e/profile.spec.ts"],
+        "duplication_type": "near-identical",
+        "recommendation": "Extract login to a shared beforeEach fixture — only test it explicitly in auth.spec.ts"
       }
     ]
   },
@@ -136,7 +154,7 @@ The `strategy` object injected as `reportData` in the HTML template.
 | `{{STACK_LANGUAGE}}` | string | `strategy.stack.language` |
 | `{{STACK_FRAMEWORK}}` | string | `strategy.stack.framework` |
 | `{{TEST_FILE_COUNT}}` | number | `strategy.stack.test_file_count` |
-| `{{OVERLAP_COUNT}}` | number | `strategy.overlap_analysis.candidates.length` |
+| `{{OVERLAP_COUNT}}` | number | `strategy.overlap_analysis.cross_layer_count + strategy.overlap_analysis.intra_type_count` |
 | `{{REPORT_JSON}}` | JSON | Full `strategy` object — injected into `<script>` block |
 
 All string tokens must be HTML-escaped before injection to prevent XSS.

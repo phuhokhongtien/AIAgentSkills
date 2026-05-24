@@ -15,7 +15,7 @@ description: >
   "BDD for my project", "given when then tests", "non-technical test specs",
   "overlap between tests", "redundant tests",
   "chiến lược test", "nên test gì", "mock như thế nào", "tránh overlap test".
-version: 0.1.0
+version: 0.1.1
 tools: Read, Write, Glob, Grep, Bash, AskUserQuestion
 ---
 
@@ -146,20 +146,60 @@ For each, assess:
 
 Record `existing_test_quality = { rating: "good|fair|poor", issues[], positives[] }`.
 
-**Step 4 — Overlap detection:**
+**Step 4 — Overlap detection (cross-layer AND intra-type):**
+
 For each test file, determine which behaviors it exercises:
 - Does it call a service method directly? (`covers_service_method`)
 - Does it call an HTTP endpoint? (`covers_endpoint`)
 - Does it click UI elements? (`covers_ui_action`)
 - Does it use the same assertion as another test file at a different layer?
 
-Flag overlap candidates:
+**4a — Cross-layer overlaps** (behavior tested redundantly at multiple test types):
 - Unit + Integration covering identical logic → overlap, integration should own it
 - Integration + API test with same endpoint + same assertions → overlap, API test owns it
 - API + Automation test covering same user action → overlap, API test owns it
 - Multiple E2E tests covering same full journey → overlap, one E2E owns it
 
-Record `overlap_candidates[] = { behavior, layers_covering_it[], recommended_owner, reason }`.
+Record `overlap_candidates[] = { behavior, covered_by: {unit,integration,api,ui,automation}, recommended_owner, reason }`.
+
+**4b — Intra-type overlaps** (duplicate tests within the same test type):
+For each test type separately, scan all test files of that type and detect:
+- **Unit**: Multiple test files asserting the same function/method with identical or near-identical inputs/outputs
+  - Signal: same function name called in `describe`/`it` blocks across different test files
+- **Integration**: Multiple integration test files hitting the same endpoint with the same expected status code + response shape
+  - Signal: same route string (e.g., `POST /orders`) with same assertion pattern in 2+ files
+- **API**: Same endpoint + HTTP method tested with the same status code in 2+ API test suites
+- **E2E / Automation**: Same user journey sequence (login → action → assert outcome) repeated in multiple test files
+  - Signal: same sequence of UI selectors or page actions across 2+ test files
+- **BDD**: Duplicate Gherkin scenarios (same Given/When clause with same Then outcome) in different feature files
+
+Classify each intra-type overlap:
+- `identical` — same function/endpoint/journey, same assertions, effectively copy-paste
+- `near-identical` — same target, minor variation (different user role, minor input diff) that could be table-driven
+- `subset` — one test covers a superset of what another test covers (smaller test is redundant)
+
+Record:
+```
+intra_type_overlaps[] = {
+  test_type,          // "unit" | "integration" | "api" | "e2e" | "automation" | "bdd"
+  behavior,           // human-readable description, e.g. "validateOrder() happy path"
+  test_files[],       // list of files containing the duplication
+  duplication_type,   // "identical" | "near-identical" | "subset"
+  recommendation      // e.g. "Consolidate into order.test.ts — delete duplicate in checkout.test.ts"
+                      // or "Parameterize into a data-driven test table"
+}
+```
+
+Combined output:
+```
+overlap_analysis = {
+  has_overlaps: bool,
+  cross_layer_count: int,
+  intra_type_count: int,
+  candidates[],         // cross-layer overlaps
+  intra_type_overlaps[] // within-type duplicates
+}
+```
 
 **Step 5 — External dependency map:**
 Grep source files for external I/O that needs mocking:
@@ -288,7 +328,8 @@ Shape: <project_shape>  │  Model: <testing_model>
 
 Mocking: <school> school — <one-line rule>
 
-⚠️  <N> overlap issues detected  (or ✅ No overlaps detected)
+⚠️  <N> cross-layer overlaps  │  <M> intra-type duplicates
+    (or ✅ No overlaps detected)
 
 Top actions:
   [P0] <title>

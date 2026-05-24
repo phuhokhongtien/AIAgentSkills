@@ -115,6 +115,15 @@ a { color: var(--blue); text-decoration: none; }
 .antipattern-list li::before { content: '✕ '; color: var(--red); }
 
 /* Overlap Analysis */
+.overlap-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+.overlap-tab { padding: 8px 18px; font-size: 13px; font-weight: 600; cursor: pointer; border: 1px solid transparent; border-bottom: none; border-radius: 6px 6px 0 0; color: var(--text-muted); background: transparent; transition: all 0.15s; }
+.overlap-tab:hover { color: var(--text); background: var(--surface2); }
+.overlap-tab.active { background: var(--surface2); color: var(--text); border-color: var(--border); border-bottom: 1px solid var(--surface2); margin-bottom: -1px; }
+.overlap-tab .tab-badge { display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 10px; font-size: 11px; font-weight: 700; background: var(--surface); }
+.overlap-tab.active .tab-badge-warn { background: rgba(248,81,73,0.15); color: var(--red); }
+.overlap-tab.active .tab-badge-ok { background: rgba(63,185,80,0.15); color: var(--green); }
+.overlap-pane { display: none; }
+.overlap-pane.active { display: block; }
 .overlap-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .overlap-table th { background: var(--surface2); color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
 .overlap-table td { padding: 10px 12px; border-bottom: 1px solid #21262d; vertical-align: middle; }
@@ -125,6 +134,13 @@ a { color: var(--blue); text-decoration: none; }
 .overlap-row-clean td { background: rgba(63,185,80,0.04); }
 .overlap-row-overlap td { background: rgba(248,81,73,0.04); }
 .overlap-reason { color: var(--text-muted); font-size: 12px; font-style: italic; }
+.dup-type { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+.dup-identical { background: rgba(248,81,73,0.15); color: var(--red); }
+.dup-near-identical { background: rgba(227,179,65,0.15); color: var(--orange); }
+.dup-subset { background: rgba(88,166,255,0.15); color: var(--blue); }
+.file-chip { display: inline-block; background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; font-size: 11px; font-family: var(--mono); margin: 2px 2px 2px 0; color: var(--text-muted); }
+.intra-rec { font-size: 12px; color: var(--text-muted); font-style: italic; }
+.type-pill { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; background: var(--surface2); color: var(--blue); border: 1px solid rgba(88,166,255,0.3); }
 
 /* Coverage */
 .coverage-gauge { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
@@ -312,22 +328,63 @@ h4.sub-heading { font-size: 12px; color: var(--text-muted); text-transform: uppe
       <span class="section-toggle open">▶</span>
     </div>
     <div class="section-body" id="sec-overlap">
+      <!-- Summary tip bar -->
       <div class="info-tip" id="overlap-summary-tip"></div>
-      <table class="overlap-table" id="overlap-table">
-        <thead>
-          <tr>
-            <th>Behavior</th>
-            <th>Unit</th>
-            <th>Integration</th>
-            <th>API</th>
-            <th>UI/E2E</th>
-            <th>Automation</th>
-            <th>Owner</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody id="overlap-table-body"></tbody>
-      </table>
+
+      <!-- Tabs: Cross-Layer / Intra-Type -->
+      <div class="overlap-tabs">
+        <div class="overlap-tab active" id="tab-cross" onclick="switchOverlapTab('cross')">
+          Cross-Layer Overlaps
+          <span class="tab-badge tab-badge-warn" id="tab-cross-badge">0</span>
+        </div>
+        <div class="overlap-tab" id="tab-intra" onclick="switchOverlapTab('intra')">
+          Within-Type Duplicates
+          <span class="tab-badge tab-badge-warn" id="tab-intra-badge">0</span>
+        </div>
+      </div>
+
+      <!-- Pane 1: cross-layer -->
+      <div class="overlap-pane active" id="pane-cross">
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">
+          Behaviors tested redundantly at multiple layers — each row shows which types cover the same behavior and which layer should own it.
+        </p>
+        <table class="overlap-table" id="overlap-table">
+          <thead>
+            <tr>
+              <th>Behavior</th>
+              <th>Unit</th>
+              <th>Integration</th>
+              <th>API</th>
+              <th>UI/E2E</th>
+              <th>Automation</th>
+              <th>Owner</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="overlap-table-body"></tbody>
+        </table>
+        <div id="cross-empty" style="display:none;padding:20px;text-align:center;color:var(--green)">✅ No cross-layer overlaps detected — clean layer ownership.</div>
+      </div>
+
+      <!-- Pane 2: intra-type -->
+      <div class="overlap-pane" id="pane-intra">
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">
+          Duplicate tests within the same test type — multiple test files covering the exact same function, endpoint, or journey.
+        </p>
+        <table class="overlap-table" id="intra-table">
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>Behavior</th>
+              <th>Duplicate Files</th>
+              <th>Kind</th>
+              <th>Recommendation</th>
+            </tr>
+          </thead>
+          <tbody id="intra-table-body"></tbody>
+        </table>
+        <div id="intra-empty" style="display:none;padding:20px;text-align:center;color:var(--green)">✅ No within-type duplicates detected.</div>
+      </div>
     </div>
   </div>
 
@@ -445,16 +502,18 @@ function toggleSection(header) {
 // ── Summary Cards ──────────────────────────────────────────────────────────
 (function() {
   const d = reportData;
-  const overlapCount = d.overlap_analysis ? d.overlap_analysis.candidates.filter(c => {
-    const layers = c.covered_by;
-    return Object.values(layers).filter(Boolean).length > 1;
-  }).length : 0;
+  const oa = d.overlap_analysis;
+  const crossCount = oa ? (oa.cross_layer_count !== undefined ? oa.cross_layer_count
+    : oa.candidates.filter(c => Object.values(c.covered_by).filter(Boolean).length > 1).length) : 0;
+  const intraCount = oa ? (oa.intra_type_count !== undefined ? oa.intra_type_count
+    : (oa.intra_type_overlaps||[]).length) : 0;
+  const overlapCount = crossCount + intraCount;
 
   const cards = [
     { label:'Testing Model', value: d.testing_model.charAt(0).toUpperCase()+d.testing_model.slice(1), cls:'val-blue', sub: d.project_shape },
     { label:'Test Files', value: d.stack.test_file_count, cls: d.stack.test_file_count>0?'val-green':'val-red', sub: d.stack.has_existing_tests?'existing tests':'no tests yet' },
     { label:'Test Types', value: d.test_types.filter(t=>t.recommendation!=='skip').length, cls:'val-green', sub:'recommended/essential' },
-    { label:'Overlap Issues', value: overlapCount, cls: overlapCount>0?'val-red':'val-green', sub: overlapCount>0?'redundant coverage':'clean layer ownership' },
+    { label:'Overlap Issues', value: overlapCount, cls: overlapCount>0?'val-red':'val-green', sub: overlapCount>0?`${crossCount} cross-layer · ${intraCount} within-type`:'no redundancy detected' },
     { label:'Coverage Est.', value: d.coverage.overall_estimate, cls:'val-yellow', sub:'current estimate' },
     { label:'CI', value: d.ci_plan.current_ci||'None detected', cls: d.ci_plan.current_has_tests?'val-green':'val-yellow', sub: d.ci_plan.current_has_tests?'test step found':'no test step' },
   ];
@@ -603,37 +662,93 @@ function toggleSection(header) {
   (m.anti_patterns||[]).forEach(ap => { apList.innerHTML += `<li>${esc(ap)}</li>`; });
 })();
 
+// ── Overlap tab switcher ───────────────────────────────────────────────────
+function switchOverlapTab(name) {
+  ['cross','intra'].forEach(t => {
+    document.getElementById('tab-'+t).classList.toggle('active', t===name);
+    document.getElementById('pane-'+t).classList.toggle('active', t===name);
+  });
+}
+
 // ── Overlap Analysis ───────────────────────────────────────────────────────
 (function() {
   if (!reportData.stack.has_existing_tests || !reportData.overlap_analysis) return;
   document.getElementById('sec-overlap-wrap').style.display = '';
   const oa = reportData.overlap_analysis;
-  const overlapCount = oa.candidates.filter(c => Object.values(c.covered_by).filter(Boolean).length > 1).length;
-  const tip = document.getElementById('overlap-summary-tip');
-  tip.textContent = overlapCount > 0
-    ? `${overlapCount} overlap(s) detected. Red rows indicate redundant test coverage — the "Owner" column shows which layer should own the behavior. Remove or slim down tests in other layers.`
-    : 'No overlaps detected — each behavior is owned by exactly one test layer. ✅';
 
+  // ── Cross-layer overlaps ──
+  const crossCandidates = (oa.candidates||[]).filter(c => Object.values(c.covered_by).filter(Boolean).length > 1);
+  const crossCount = oa.cross_layer_count !== undefined ? oa.cross_layer_count : crossCandidates.length;
+  const intraItems = oa.intra_type_overlaps || [];
+  const intraCount = oa.intra_type_count !== undefined ? oa.intra_type_count : intraItems.length;
+  const totalCount = crossCount + intraCount;
+
+  // Summary tip
+  const tip = document.getElementById('overlap-summary-tip');
+  if (totalCount === 0) {
+    tip.textContent = 'No overlaps detected — test coverage is clean across all types and layers. ✅';
+  } else {
+    tip.innerHTML = `<strong>${totalCount} overlap issue(s) found:</strong> `
+      + (crossCount > 0 ? `<span style="color:var(--red)">${crossCount} cross-layer</span>` : '<span style="color:var(--green)">0 cross-layer</span>')
+      + ' &nbsp;·&nbsp; '
+      + (intraCount > 0 ? `<span style="color:var(--orange)">${intraCount} within-type duplicate(s)</span>` : '<span style="color:var(--green)">0 within-type</span>')
+      + '. Fix these to keep your test suite lean and maintainable.';
+  }
+
+  // Tab badges
+  const crossBadge = document.getElementById('tab-cross-badge');
+  const intraBadge = document.getElementById('tab-intra-badge');
+  crossBadge.textContent = crossCount;
+  intraBadge.textContent = intraCount;
+  if (crossCount === 0) crossBadge.className = 'tab-badge tab-badge-ok';
+  if (intraCount === 0) intraBadge.className = 'tab-badge tab-badge-ok';
+
+  // ── Pane 1: cross-layer table ──
   const tbody = document.getElementById('overlap-table-body');
-  oa.candidates.forEach(c => {
-    const layers = ['unit','integration','api','ui','automation'];
-    const covered = layers.map(l => c.covered_by[l]);
-    const hasOverlap = covered.filter(Boolean).length > 1;
-    const rowClass = hasOverlap ? 'overlap-row-overlap' : 'overlap-row-clean';
-    const cells = layers.map(l => {
-      const on = c.covered_by[l];
-      const isOwner = c.recommended_owner === l;
-      if (on && isOwner) return `<td><span style="color:var(--green);font-weight:700">✅ owns</span></td>`;
-      if (on && !isOwner) return `<td><span class="overlap-yes">⚠ dup</span></td>`;
-      return `<td><span class="overlap-no">—</span></td>`;
-    }).join('');
-    tbody.innerHTML += `<tr class="${rowClass}">
-      <td><strong>${esc(c.behavior)}</strong><div class="overlap-reason">${esc(c.reason||'')}</div></td>
-      ${cells}
-      <td><span class="overlap-owner">${esc(c.recommended_owner)}</span></td>
-      <td style="font-size:12px;color:var(--text-muted)">Remove dup from other layers</td>
-    </tr>`;
-  });
+  if ((oa.candidates||[]).length === 0) {
+    document.getElementById('cross-empty').style.display = '';
+    document.getElementById('overlap-table').style.display = 'none';
+  } else {
+    oa.candidates.forEach(c => {
+      const layers = ['unit','integration','api','ui','automation'];
+      const covered = layers.map(l => c.covered_by[l]);
+      const hasOverlap = covered.filter(Boolean).length > 1;
+      const rowClass = hasOverlap ? 'overlap-row-overlap' : 'overlap-row-clean';
+      const cells = layers.map(l => {
+        const on = c.covered_by[l];
+        const isOwner = c.recommended_owner === l;
+        if (on && isOwner) return `<td><span style="color:var(--green);font-weight:700">✅ owns</span></td>`;
+        if (on && !isOwner) return `<td><span class="overlap-yes">⚠ dup</span></td>`;
+        return `<td><span class="overlap-no">—</span></td>`;
+      }).join('');
+      tbody.innerHTML += `<tr class="${rowClass}">
+        <td><strong>${esc(c.behavior)}</strong><div class="overlap-reason">${esc(c.reason||'')}</div></td>
+        ${cells}
+        <td><span class="overlap-owner">${esc(c.recommended_owner)}</span></td>
+        <td style="font-size:12px;color:var(--text-muted)">Remove dup from other layers</td>
+      </tr>`;
+    });
+  }
+
+  // ── Pane 2: intra-type table ──
+  const intraBody = document.getElementById('intra-table-body');
+  if (intraItems.length === 0) {
+    document.getElementById('intra-empty').style.display = '';
+    document.getElementById('intra-table').style.display = 'none';
+  } else {
+    const dupCls = { 'identical': 'dup-identical', 'near-identical': 'dup-near-identical', 'subset': 'dup-subset' };
+    intraItems.forEach(it => {
+      const cls = dupCls[it.duplication_type] || 'dup-near-identical';
+      const filesHtml = (it.test_files||[]).map(f => `<span class="file-chip">${esc(f)}</span>`).join('');
+      intraBody.innerHTML += `<tr class="overlap-row-overlap">
+        <td><span class="type-pill">${esc(it.test_type)}</span></td>
+        <td><strong>${esc(it.behavior)}</strong></td>
+        <td style="max-width:260px">${filesHtml}</td>
+        <td><span class="dup-type ${cls}">${esc(it.duplication_type||'?')}</span></td>
+        <td class="intra-rec">${esc(it.recommendation||'')}</td>
+      </tr>`;
+    });
+  }
 })();
 
 // ── Coverage Analysis ──────────────────────────────────────────────────────
