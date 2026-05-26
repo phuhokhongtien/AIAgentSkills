@@ -13,5 +13,11 @@
       "runtimeArgs": ["-m", "http.server", "7654", "--directory", ".claude/skills/testing-explorer/.report"],
       "port": 7654
     }
+  ,{
+      "name": "csharp-explorer-sample",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "7656", "--directory", "skills/csharp-explorer/assets/sample"],
+      "port": 7656
+    }
   ]
 }
