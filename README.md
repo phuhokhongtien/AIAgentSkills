@@ -25,6 +25,34 @@ Debug any API endpoint by tracing the full request flow — from curl to respons
 - **Precise log parsing**: ANSI-stripping pre-processor → canonical clean log; anchored per-framework patterns replace naive `grep SELECT|INSERT` (eliminates false positives from stack traces and JSON request bodies); ripgrep multiline for multi-line query blocks
 - **Rich DB Queries dashboard**: interactive table with expandable rows, CSS-only SQL syntax highlight, filter (All / Slow / N+1), sort, search, copy-SQL button, timeline strip, N+1 shape-group color coding
 
+### `csharp-explorer` — v0.1.0
+
+Analyze any C# class or method in depth — trace its **call graph**, understand its **DI wiring**, detect **async anti-patterns**, and build up knowledge **day by day** across multiple sessions. Results persist in a global store and can be visualized on demand as an interactive unified diagram.
+
+**When to use:**
+- "Explain this class / method" — what it does, what it calls, who calls it
+- "Trace the call graph for `OrderService.CreateOrder`" — BFS up to configurable depth
+- "What implements `IOrderService`?" — interface → implementation mapping
+- "How is `OrderService` registered?" — DI lifetime detection
+- "Who calls this method?" — find all callers across the codebase
+- "Understand this async flow" — detect `async void`, missing `await`, lifetime mismatches
+- `csharp-explorer show` — visualize ALL accumulated analysis data as one unified diagram
+
+**Key capabilities:**
+- **Context hydration**: loads prior run data at session start as hints; validates each cached location against source before use (source code always wins)
+- **Chunking-first reads**: Grep → line number → `Read` with exact `offset`/`limit` — never reads a full file blindly
+- **BFS call graph**: configurable depth (1–4), 50-node cap, cycle detection, partial class identity by `(namespace, class_name)`
+- **C# specifics**: DI injection detection, async/await analysis, partial classes, EF Core / HttpClient / MediatR patterns, layer classification (controller/service/repository/domain/handler/…)
+- **Append-only global store**: each run saves JSON to `~/.claude/csharp-explorer/<project>/` — accumulates across sessions
+- **On-demand diagram** (`csharp-explorer show`): merges all stored runs, deduplicates by `(namespace, class, method)`, renders a force-directed interactive SVG with run timeline, filter controls, and stale-node detection
+
+**Invocation modes:**
+- `/csharp-explorer <TargetName>` — analyze a class or method
+- `/csharp-explorer show` — merge all stored runs into an HTML diagram
+- `/csharp-explorer clear` — purge stored run data for the current project (with confirmation)
+
+Invoke with `/csharp-explorer` or natural phrases like *"explain this class"*, *"who calls CreateOrder"*, *"trace the call graph"*, *"hiểu class này"*, *"trace caller"*.
+
 ### `testing-strategy` — v0.1.2
 
 A **Testing Strategist** that analyzes your project's codebase and produces a project-specific testing strategy — covering unit, integration, API, UI/E2E, load, performance, automation, and BDD. Generates an interactive dark-theme HTML report with a test pyramid/trophy visualization, overlap detection, mocking guidance, and a prioritized action list.
@@ -327,6 +355,16 @@ AIAgentSkills/
 │               ├── execution-protocol.md ← dependency graph, interface-first parallelism, Impact Ripple, rollback
 │               ├── state-management.md  ← session dir schema, all file formats, rolling-wave-summary rule
 │               └── ticket-ingestion.md  ← URL detection, MCP tools per system, field mapping, wave mapping, real-time status updates
+│       ├── csharp-explorer/            ← deployed copy (auto-loaded by Claude Code)
+│       │   ├── SKILL.md                ← 8-phase workflow (Phases 0–7 + S + C)
+│       │   ├── assets/
+│       │   │   └── report-template.html ← force-directed SVG + run timeline
+│       │   └── references/
+│       │       ├── csharp-patterns.md   ← definition/callee/caller/DI/IO/layer grep patterns
+│       │       ├── traversal-strategy.md ← BFS pseudo-code, cycle detection, merge algorithm
+│       │       ├── chunking-guide.md    ← offset/limit table, brace-depth, large file strategy
+│       │       ├── report-format.md     ← per-run + merged JSON schema, placeholder tokens
+│       │       └── cache-strategy.md   ← validation rules, staleness signals, append-only design
 │       ├── testing-strategy/           ← deployed copy (auto-loaded by Claude Code)
 │       │   ├── SKILL.md                ← 6-phase strategy workflow
 │       │   ├── assets/
@@ -344,6 +382,7 @@ AIAgentSkills/
 ├── skills/                            ← source-of-truth mirror of .claude/skills/
 │   ├── api-flow-debugger/
 │   ├── agent-debate-team/
+│   ├── csharp-explorer/               ← v0.1.0 — C# call graph explorer with persistent store
 │   ├── testing-explorer/
 │   ├── testing-strategy/              ← v0.1.2 — testing strategy advisor (scope + overlap)
 │   ├── agent-forge-team/              ← includes references/ticket-ingestion.md (v0.2.0)
@@ -364,6 +403,7 @@ AIAgentSkills/
 │       └── README.md
 ├── api-flow-debugger.skill            ← distributable package (ZIP)
 ├── agent-debate-team.skill            ← distributable package (ZIP)
+├── csharp-explorer.skill              ← distributable package (ZIP)
 ├── testing-explorer.skill             ← distributable package (ZIP)
 ├── testing-strategy.skill             ← distributable package (ZIP)
 ├── agent-forge-team.skill             ← distributable package (ZIP)
@@ -393,6 +433,25 @@ AIAgentSkills/
 ---
 
 ## Release Notes
+
+### 2026-05-26 — `csharp-explorer` v0.1.0 — C# call graph explorer with persistent store
+
+**New skill: analyze C# classes and methods with BFS call graph traversal, DI analysis, and multi-session accumulation**
+
+- **Phase 0 — Context Hydration**: loads prior run data from global store at startup; validates each cached `(file, definition_line)` pair with a 3-line Read before use — source code always wins on mismatch
+- **Phase 1 — Intake**: parses `target_name`, `direction` (callers/callees/both), `depth` (1–4), `namespace_filter`, `file_hint` — proceeds immediately when unambiguous
+- **Phase 2 — Locate Target**: cache-first lookup (fast path on repeat runs); falls back to Glob + Grep with disambiguation via `AskUserQuestion` only when ≥2 candidates found
+- **Phase 3 — Extract Definition**: brace-depth counting in 100-line windows, hard cap 500 lines; extracts modifiers, return type, parameters, attributes, DI constructor dependencies
+- **Phase 4 — Map Callees**: extracts outgoing calls from method body; resolves receiver types via DI deps + field declarations; classifies as external I/O (database/http/messaging/cache/storage/email), async, internal
+- **Phase 5 — Map Callers (BFS)**: queue-based traversal with `visited` set for cycle detection; test callers isolated in `test_callers[]`; 50-node cap with truncation flag; partial class identity by `(namespace, class_name)` tuple
+- **Phase 6 — Synthesize**: layer classification (controller/service/repository/domain/handler/middleware/validator/cqrs-handler/factory/utility), boundary type, async anti-pattern detection (`async void`, no-await, task-not-awaited), DI lifetime mismatch detection (Singleton→Scoped), interface implementation and partial class mapping
+- **Phase 7 — Save & Chat Summary**: writes timestamped JSON to `~/.claude/csharp-explorer/<project_slug>/`; prints structured chat summary; no auto-generated HTML
+- **Phase S — Show Diagram**: triggered by `csharp-explorer show`; loads all JSON files, validates staleness, merges nodes/edges by `(namespace, class, method)` key with `first_seen`/`last_seen`/`run_count`; generates interactive dark-theme HTML with force-directed SVG, run timeline, filter controls, callers/callees/DI/concerns tables
+- **Phase C — Clear Store**: lists and deletes run JSON files for current project after confirmation
+- **References**: `csharp-patterns.md` (definition/callee/caller/DI/IO/layer patterns), `traversal-strategy.md` (BFS pseudo-code, cycle detection, merge algorithm), `chunking-guide.md` (offset/limit table, brace-depth algorithm, large file strategy), `report-format.md` (per-run + merged JSON schema, placeholder tokens), `cache-strategy.md` (validation rules, staleness signals, append-only design)
+- **HTML report**: dark theme (`#0d1117`), force-directed SVG graph (simulated physics, pan/zoom, click-to-inspect), run timeline, 6 summary cards, callers/callees tables with filter/sort, DI dependency table with lifetime mismatch highlighting, concerns list — vanilla JS, no external deps
+
+---
 
 ### 2026-05-24 — `testing-strategy` v0.1.2 — focused scope + call graph analysis
 
