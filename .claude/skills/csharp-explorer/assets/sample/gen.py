@@ -1,0 +1,111 @@
+import json, pathlib
+
+template = pathlib.Path('../report-template.html').read_text(encoding='utf-8')
+
+sample = {
+  "schema_version": "1.0",
+  "timestamp": "2026-05-26T10:30:00Z",
+  "project_name": "MyShop",
+  "project_slug": "myshop",
+  "target": {
+    "name": "OrderService.CreateOrder",
+    "class_name": "OrderService",
+    "method_name": "CreateOrder",
+    "kind": "method",
+    "file": "src/Services/OrderService.cs",
+    "definition_line": 47,
+    "namespace": "MyShop.Services",
+    "layer": "service",
+    "boundary_type": "domain-core",
+    "modifiers": ["public", "async"],
+    "return_type": "Task<Order>",
+    "parameters": [{"type": "CreateOrderDto", "name": "dto"}],
+    "attributes": ["[Authorize]"],
+    "di_dependencies": [
+      {"interface_type": "IOrderRepository", "param_name": "_orderRepo", "lifetime": "scoped"},
+      {"interface_type": "IPaymentGateway", "param_name": "_payment", "lifetime": "transient"},
+      {"interface_type": "ILogger<OrderService>", "param_name": "_logger", "lifetime": "singleton"}
+    ],
+    "cache_hit": False
+  },
+  "intake": {"direction": "both", "depth": 2, "namespace_filter": None},
+  "definition": {
+    "body_preview": "public async Task<Order> CreateOrder(CreateOrderDto dto)\n{\n    var order = new Order { CustomerId = dto.CustomerId, Status = OrderStatus.Pending };\n    await _orderRepo.SaveAsync(order);\n    var result = await _payment.ChargeAsync(dto.PaymentInfo, order.Total);\n    if (!result.Success)\n    {\n        order.Status = OrderStatus.PaymentFailed;\n        await _orderRepo.UpdateAsync(order);\n        throw new PaymentException(result.Error);\n    }\n    order.Status = OrderStatus.Confirmed;\n    await _orderRepo.UpdateAsync(order);\n    _logger.LogInformation(\"Order {Id} created\", order.Id);\n    return order;\n}",
+    "body_full": None,
+    "line_start": 47,
+    "line_end": 72,
+    "truncated": False
+  },
+  "callees": [
+    {"receiver": "_orderRepo", "receiver_type": "IOrderRepository", "method_name": "SaveAsync", "file": "src/Repositories/OrderRepository.cs", "definition_line": 23, "is_external_io": True, "io_category": "database", "is_async": True, "is_internal": True, "is_static": False, "raw_line": "    await _orderRepo.SaveAsync(order);"},
+    {"receiver": "_payment", "receiver_type": "IPaymentGateway", "method_name": "ChargeAsync", "file": None, "definition_line": None, "is_external_io": True, "io_category": "http", "is_async": True, "is_internal": False, "is_static": False, "raw_line": "    var result = await _payment.ChargeAsync(dto.PaymentInfo, order.Total);"},
+    {"receiver": "_orderRepo", "receiver_type": "IOrderRepository", "method_name": "UpdateAsync", "file": "src/Repositories/OrderRepository.cs", "definition_line": 35, "is_external_io": True, "io_category": "database", "is_async": True, "is_internal": True, "is_static": False, "raw_line": "    await _orderRepo.UpdateAsync(order);"},
+    {"receiver": "_logger", "receiver_type": "ILogger<OrderService>", "method_name": "LogInformation", "file": None, "definition_line": None, "is_external_io": False, "io_category": "logging", "is_async": False, "is_internal": False, "is_static": False, "raw_line": "    _logger.LogInformation(\"Order {Id} created\", order.Id);"}
+  ],
+  "caller_tree": {
+    "nodes": [
+      {"id": "MyShop.Controllers::OrderController::Post", "class_name": "OrderController", "method_name": "Post", "namespace": "MyShop.Controllers", "file": "src/Controllers/OrderController.cs", "line_number": 34, "layer": "controller", "depth": 1, "call_expression": "await _orderService.CreateOrder(dto);"},
+      {"id": "MyShop.Controllers::OrderController::BulkCreate", "class_name": "OrderController", "method_name": "BulkCreate", "namespace": "MyShop.Controllers", "file": "src/Controllers/OrderController.cs", "line_number": 58, "layer": "controller", "depth": 1, "call_expression": "await _orderService.CreateOrder(item);"},
+      {"id": "MyShop.Jobs::OrderImportJob::ProcessRow", "class_name": "OrderImportJob", "method_name": "ProcessRow", "namespace": "MyShop.Jobs", "file": "src/Jobs/OrderImportJob.cs", "line_number": 89, "layer": "background-job", "depth": 1, "call_expression": "await _orderService.CreateOrder(mapped);"},
+      {"id": "MyShop.Controllers::AdminController::Import", "class_name": "AdminController", "method_name": "Import", "namespace": "MyShop.Controllers", "file": "src/Controllers/AdminController.cs", "line_number": 112, "layer": "controller", "depth": 2, "call_expression": "await _importJob.ProcessRow(row);"}
+    ],
+    "edges": [
+      {"from": "MyShop.Controllers::OrderController::Post", "to": "MyShop.Services::OrderService::CreateOrder"},
+      {"from": "MyShop.Controllers::OrderController::BulkCreate", "to": "MyShop.Services::OrderService::CreateOrder"},
+      {"from": "MyShop.Jobs::OrderImportJob::ProcessRow", "to": "MyShop.Services::OrderService::CreateOrder"},
+      {"from": "MyShop.Controllers::AdminController::Import", "to": "MyShop.Jobs::OrderImportJob::ProcessRow"}
+    ],
+    "depth_reached": 2,
+    "truncated": False,
+    "total_caller_count": 4,
+    "test_callers": [
+      {"class_name": "OrderServiceTests", "method_name": "CreateOrder_ValidDto_Returns201", "file": "tests/Services/OrderServiceTests.cs", "line_number": 45},
+      {"class_name": "OrderServiceTests", "method_name": "CreateOrder_PaymentFails_Throws", "file": "tests/Services/OrderServiceTests.cs", "line_number": 72}
+    ],
+    "test_caller_count": 2
+  },
+  "synthesis": {
+    "target_summary": "Creates a new order from a DTO, persists it via the repository, and charges payment. On failure, marks order as failed and throws PaymentException.",
+    "layer": "service",
+    "boundary_type": "domain-core",
+    "key_insight": "Core business logic node: 4 callers (2 controllers + 1 job) and 3 external I/O dependencies",
+    "async_issues": [],
+    "di_issues": [],
+    "interface_implementations": [{"class_name": "OrderService", "file": "src/Services/OrderService.cs", "line": 12}],
+    "partial_parts": [],
+    "concerns": []
+  },
+  "stats": {
+    "caller_count": 4,
+    "test_caller_count": 2,
+    "callee_count": 4,
+    "external_io_count": 3,
+    "async_callee_count": 3,
+    "partial_class_parts": 0,
+    "interface_implementations": 1,
+    "cache_hit": False
+  }
+}
+
+filled = template.replace("{{REPORT_JSON}}", json.dumps(sample))
+replacements = {
+    "{{PROJECT_NAME}}": "MyShop",
+    "{{TARGET_NAME}}": "OrderService.CreateOrder",
+    "{{TARGET_KIND}}": "method",
+    "{{TARGET_FILE}}": "src/Services/OrderService.cs",
+    "{{TARGET_LINE}}": "47",
+    "{{NAMESPACE}}": "MyShop.Services",
+    "{{LAYER}}": "service",
+    "{{BOUNDARY_TYPE}}": "domain-core",
+    "{{CALLER_COUNT}}": "4",
+    "{{CALLEE_COUNT}}": "4",
+    "{{EXTERNAL_IO_COUNT}}": "3",
+    "{{CONCERN_COUNT}}": "0",
+    "{{KEY_INSIGHT}}": "Core business logic node: 4 callers and 3 external I/O dependencies",
+    "{{TIMESTAMP}}": "2026-05-26 10:30 UTC",
+}
+for k, v in replacements.items():
+    filled = filled.replace(k, v)
+
+pathlib.Path('index.html').write_text(filled, encoding='utf-8')
+print("Done, size:", len(filled))

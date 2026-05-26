@@ -1,26 +1,36 @@
 ---
 name: csharp-explorer
 description: >
-  Use this skill when the user wants to understand a C# class or method —
-  where it is defined, what it calls, who calls it, how deep the call chain
-  goes, or how it fits into the architecture (DI wiring, interfaces, async).
-  Also use for: "explain this class", "who calls this method", "trace the
-  call graph", "find all callers of X", "what does Y depend on",
+  ALWAYS invoke this skill when working in a C# project (.cs files present)
+  and the user asks ANY question about a class, method, interface, or how
+  code works — even vague questions like "explain this", "what does X do",
+  "how does this work", "where is X defined", "what calls this", "who uses X".
+  Also invoke when the AI is actively reading .cs files and the user asks
+  about code structure, dependencies, or architecture.
+  Explicit trigger phrases: "explain this class", "who calls this method",
+  "trace the call graph", "find all callers of X", "what does Y depend on",
   "show the call tree for Z", "what implements IOrderService",
   "how is OrderService registered", "understand this async flow",
   "explore this C# codebase", "hiểu class này", "trace caller",
-  "show diagram", "csharp-explorer show", "visualize call graph".
-version: 0.1.0
+  "show diagram", "csharp-explorer show", "visualize call graph",
+  "what calls X", "who uses X", "where is X", "explain X", "how does X work",
+  "what is X", "show me X", "analyze X", "understand X".
+  This skill loads prior knowledge from a persistent store — invoke it even
+  for repeat questions to benefit from cached call graph data.
+version: 0.1.1
 tools: Read, Glob, Grep, Write, AskUserQuestion
 ---
 
 ## Invocation Modes
 
-This skill has three invocation modes detected from the user's message:
+Detect from user's message — first match wins:
 
-- **analyze** (default): user asks about a class/method → run Phases 0–7
-- **show** / **diagram**: user says "show diagram", "csharp-explorer show", "visualize" → run Phase S only
-- **clear**: user says "csharp-explorer clear", "clear store" → run Phase C only
+| Mode | Trigger phrases | Phases |
+|---|---|---|
+| **init** | "csharp-explorer init", "setup hook", "install hook", "setup csharp-explorer" | Phase I only |
+| **show** | "show diagram", "csharp-explorer show", "visualize", "show call graph" | Phase S only |
+| **clear** | "csharp-explorer clear", "clear store", "reset csharp-explorer" | Phase C only |
+| **analyze** (default) | any class/method question, reading .cs files | Phases 0–7 |
 
 ---
 
@@ -373,6 +383,68 @@ Build: `merged = { runs[], nodes[], edges[], concerns[], di_map[], timeline_stat
    - macOS: `open "<path>"`
    - Linux: `xdg-open "<path>"`
 6. Print: `Diagram saved → <path>`
+
+---
+
+## Phase I — Init *(triggered by "init", "setup hook", "csharp-explorer init")*
+
+One-time setup for a new machine. Installs the PostToolUse hook so the skill
+auto-notifies when `.cs` files are read in any future session.
+
+### Step 1 — Write `hook.py`
+
+Write the canonical hook script (from `references/hook-setup.md`) to:
+- **macOS/Linux**: `~/.claude/csharp-explorer/hook.py`
+- **Windows**: `%USERPROFILE%\.claude\csharp-explorer\hook.py`
+
+Use the `Write` tool. Create the `~/.claude/csharp-explorer/` directory first if it doesn't exist (the Write tool creates parent dirs automatically).
+
+The exact content to write is the `hook.py` block in `references/hook-setup.md`.
+
+### Step 2 — Update `~/.claude/settings.json`
+
+1. Read `~/.claude/settings.json`
+2. Parse JSON
+3. **Idempotency check**: scan `hooks.PostToolUse[]` for any entry whose `command` contains `csharp-explorer/hook.py` — if found, print "Hook already installed." and skip to Step 4
+4. If `hooks` key missing → add `"hooks": {}`
+5. If `hooks.PostToolUse` missing → add `"PostToolUse": []`
+6. Append this entry to `hooks.PostToolUse`:
+```json
+{
+  "matcher": "Read|Grep",
+  "hooks": [
+    {
+      "type": "command",
+      "command": "python ~/.claude/csharp-explorer/hook.py"
+    }
+  ]
+}
+```
+7. Write the updated JSON back to `~/.claude/settings.json`
+
+### Step 3 — Verify
+
+- Confirm `~/.claude/csharp-explorer/hook.py` exists (Read the first 3 lines)
+- Confirm `~/.claude/settings.json` contains `csharp-explorer/hook.py` (Grep)
+
+### Step 4 — Print summary
+
+```
+csharp-explorer — Init complete
+
+Hook script:  ~/.claude/csharp-explorer/hook.py
+Settings:     ~/.claude/settings.json  [hook added]
+
+How it works:
+  • Fires after any Read or Grep on a .cs file
+  • Checks ~/.claude/csharp-explorer/<project>/ for prior runs
+  • Prints a one-time reminder per session when data exists
+
+Next steps:
+  • Open any C# project and ask about a class to start building your store
+  • /csharp-explorer <ClassName>   — analyze a class or method
+  • /csharp-explorer show          — visualize all accumulated data
+```
 
 ---
 

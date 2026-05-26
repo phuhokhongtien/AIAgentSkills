@@ -25,7 +25,7 @@ Debug any API endpoint by tracing the full request flow — from curl to respons
 - **Precise log parsing**: ANSI-stripping pre-processor → canonical clean log; anchored per-framework patterns replace naive `grep SELECT|INSERT` (eliminates false positives from stack traces and JSON request bodies); ripgrep multiline for multi-line query blocks
 - **Rich DB Queries dashboard**: interactive table with expandable rows, CSS-only SQL syntax highlight, filter (All / Slow / N+1), sort, search, copy-SQL button, timeline strip, N+1 shape-group color coding
 
-### `csharp-explorer` — v0.1.0
+### `csharp-explorer` — v0.1.1
 
 Analyze any C# class or method in depth — trace its **call graph**, understand its **DI wiring**, detect **async anti-patterns**, and build up knowledge **day by day** across multiple sessions. Results persist in a global store and can be visualized on demand as an interactive unified diagram.
 
@@ -47,6 +47,7 @@ Analyze any C# class or method in depth — trace its **call graph**, understand
 - **On-demand diagram** (`csharp-explorer show`): merges all stored runs, deduplicates by `(namespace, class, method)`, renders a force-directed interactive SVG with run timeline, filter controls, and stale-node detection
 
 **Invocation modes:**
+- `/csharp-explorer init` — **one-time setup** on a new machine: writes `hook.py` + injects PostToolUse hook into `~/.claude/settings.json`
 - `/csharp-explorer <TargetName>` — analyze a class or method
 - `/csharp-explorer show` — merge all stored runs into an HTML diagram
 - `/csharp-explorer clear` — purge stored run data for the current project (with confirmation)
@@ -364,7 +365,8 @@ AIAgentSkills/
 │       │       ├── traversal-strategy.md ← BFS pseudo-code, cycle detection, merge algorithm
 │       │       ├── chunking-guide.md    ← offset/limit table, brace-depth, large file strategy
 │       │       ├── report-format.md     ← per-run + merged JSON schema, placeholder tokens
-│       │       └── cache-strategy.md   ← validation rules, staleness signals, append-only design
+│       │       ├── cache-strategy.md   ← validation rules, staleness signals, append-only design
+│       │       └── hook-setup.md       ← canonical hook.py content + settings.json snippet
 │       ├── testing-strategy/           ← deployed copy (auto-loaded by Claude Code)
 │       │   ├── SKILL.md                ← 6-phase strategy workflow
 │       │   ├── assets/
@@ -382,7 +384,7 @@ AIAgentSkills/
 ├── skills/                            ← source-of-truth mirror of .claude/skills/
 │   ├── api-flow-debugger/
 │   ├── agent-debate-team/
-│   ├── csharp-explorer/               ← v0.1.0 — C# call graph explorer with persistent store
+│   ├── csharp-explorer/               ← v0.1.1 — init command, auto-notify hook, stronger triggers
 │   ├── testing-explorer/
 │   ├── testing-strategy/              ← v0.1.2 — testing strategy advisor (scope + overlap)
 │   ├── agent-forge-team/              ← includes references/ticket-ingestion.md (v0.2.0)
@@ -433,6 +435,16 @@ AIAgentSkills/
 ---
 
 ## Release Notes
+
+### 2026-05-27 — `csharp-explorer` v0.1.1 — init command + auto-notify hook + stronger triggers
+
+- **Phase I — Init**: new one-time setup command (`/csharp-explorer init`) — writes `~/.claude/csharp-explorer/hook.py` and injects a `PostToolUse` hook into `~/.claude/settings.json`; idempotent (safe to run multiple times)
+- **PostToolUse hook** (`hook.py`): fires after `Read` or `Grep` on `.cs` files; checks `~/.claude/csharp-explorer/<project>/` for prior runs; prints a one-time per-session reminder with analyze/show/init commands
+- **Stronger description triggers**: SKILL.md description now uses "ALWAYS invoke" language and covers vague C# questions ("explain this", "how does X work", "what is X") in addition to explicit phrases
+- **New reference**: `references/hook-setup.md` — canonical `hook.py` content + `settings.json` snippet for Phase I to inject
+- **Invocation mode table**: replaced prose list with a structured table mapping trigger phrases → phases
+
+---
 
 ### 2026-05-26 — `csharp-explorer` v0.1.0 — C# call graph explorer with persistent store
 
