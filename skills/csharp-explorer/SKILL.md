@@ -17,7 +17,7 @@ description: >
   "what is X", "show me X", "analyze X", "understand X".
   This skill loads prior knowledge from a persistent store — invoke it even
   for repeat questions to benefit from cached call graph data.
-version: 0.1.2
+version: 0.1.3
 tools: Read, Glob, Grep, Write, AskUserQuestion
 ---
 

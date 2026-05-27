@@ -25,7 +25,7 @@ Debug any API endpoint by tracing the full request flow — from curl to respons
 - **Precise log parsing**: ANSI-stripping pre-processor → canonical clean log; anchored per-framework patterns replace naive `grep SELECT|INSERT` (eliminates false positives from stack traces and JSON request bodies); ripgrep multiline for multi-line query blocks
 - **Rich DB Queries dashboard**: interactive table with expandable rows, CSS-only SQL syntax highlight, filter (All / Slow / N+1), sort, search, copy-SQL button, timeline strip, N+1 shape-group color coding
 
-### `csharp-explorer` — v0.1.2
+### `csharp-explorer` — v0.1.3
 
 Analyze any C# class or method in depth — trace its **call graph**, understand its **DI wiring**, detect **async anti-patterns**, and build up knowledge **day by day** across multiple sessions. Results persist in a global store and can be visualized on demand as an interactive unified diagram.
 
@@ -384,7 +384,7 @@ AIAgentSkills/
 ├── skills/                            ← source-of-truth mirror of .claude/skills/
 │   ├── api-flow-debugger/
 │   ├── agent-debate-team/
-│   ├── csharp-explorer/               ← v0.1.2 — fetch-based report server, edge fix, tiered rendering
+│   ├── csharp-explorer/               ← v0.1.3 — hook fires for any file type, read-count re-notification
 │   ├── testing-explorer/
 │   ├── testing-strategy/              ← v0.1.2 — testing strategy advisor (scope + overlap)
 │   ├── agent-forge-team/              ← includes references/ticket-ingestion.md (v0.2.0)
@@ -435,6 +435,11 @@ AIAgentSkills/
 ---
 
 ## Release Notes
+
+### 2026-05-27 — `csharp-explorer` v0.1.3 (update)
+- **Fix hook file-type filter**: hook now fires after ANY Read/Grep (was silently skipping `appsettings.json`, `README.md`, `.csproj`, etc. — only fired for `.cs` files)
+- **Read-count re-notification**: lock file upgraded from empty flag to JSON `{"read_count": N}`; notifies on read #1 then every 15 reads — ensures long context sessions get periodic reminders even after compaction
+- **Virtual test suite**: `assets/hook_test.py` — 7 suites, 23 assertions, all passing; includes mixed file-type session, multi-turn back-and-fork conversation, and Grep+Read interleaved scenarios (runs via `python hook_test.py`)
 
 ### 2026-05-27 — `csharp-explorer` v0.1.2 (update)
 - **fetch-based report server**: Phase S now writes `data.json` + slim `index.html` to `~/.claude/csharp-explorer/<project>/report/`, starts `python -m http.server 7657`, and opens `http://localhost:7657/` — no more embedded JSON in HTML (fixes Write tool timeout and browser crash on large stores)

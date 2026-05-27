@@ -10,10 +10,20 @@ Canonical content for the PostToolUse hook installed by Phase I.
 """
 csharp-explorer PostToolUse hook.
 Installed by: /csharp-explorer init
-Fires after Read or Grep. When a .cs file is accessed and prior run data
-exists for the current project, prints a one-time reminder per session.
+Fires after ANY Read or Grep (any file type).
+When prior run data exists for the current project:
+  - Notifies on the 1st read of a new count window
+  - Re-notifies every NOTIFY_INTERVAL reads (default: 15)
+  - No .cs file filter — fires whenever AI reads any file in the project
+
+v0.1.3 changes vs v0.1.1:
+  - Removed .cs file-type filter (was only firing for .cs reads)
+  - Lock file now stores JSON read-count instead of empty file
+  - Re-notification every NOTIFY_INTERVAL reads handles long context sessions
 """
 import os, json, sys
+
+NOTIFY_INTERVAL = 15
 
 try:
     tool_input = json.loads(os.environ.get("TOOL_INPUT", "{}"))
@@ -22,25 +32,17 @@ except Exception:
 
 tool_name = os.environ.get("TOOL_NAME", "")
 
-# Detect .cs file access
-is_cs = False
-if tool_name == "Read":
-    fp = tool_input.get("file_path", "")
-    is_cs = fp.endswith(".cs")
-elif tool_name == "Grep":
-    glob = tool_input.get("glob", "")
-    path = tool_input.get("path", "")
-    is_cs = ".cs" in glob or path.endswith(".cs")
-
-if not is_cs:
+# Only handle Read and Grep tool calls
+if tool_name not in ("Read", "Grep"):
     sys.exit(0)
 
 # Resolve project slug from cwd
 raw = os.path.basename(os.getcwd())
 project = raw.lower().replace(" ", "-").replace(".", "-")
 
-# Check store for prior runs
-store = os.path.join(os.path.expanduser("~"), ".claude", "csharp-explorer", project)
+# Check store for prior runs FIRST — no file-type filter
+store_parent = os.path.join(os.path.expanduser("~"), ".claude", "csharp-explorer")
+store = os.path.join(store_parent, project)
 if not os.path.isdir(store):
     sys.exit(0)
 
@@ -48,17 +50,30 @@ runs = [f for f in os.listdir(store) if f.endswith(".json")]
 if not runs:
     sys.exit(0)
 
-# One-time notification per session (lock file per project)
-lock = os.path.join(
-    os.path.expanduser("~"), ".claude", "csharp-explorer", ".notified-" + project
-)
+# Read-count based notification (lock file persists, stores JSON state)
+lock = os.path.join(store_parent, ".notified-" + project)
+state = {"read_count": 0}
 if os.path.exists(lock):
-    sys.exit(0)
+    try:
+        with open(lock) as f:
+            state = json.load(f)
+    except Exception:
+        state = {"read_count": 0}
 
+state["read_count"] = state.get("read_count", 0) + 1
+count = state["read_count"]
+
+# Save updated count
 try:
-    open(lock, "w").close()
+    with open(lock, "w") as f:
+        json.dump(state, f)
 except Exception:
     pass
+
+# Notify on first read OR every NOTIFY_INTERVAL reads
+should_notify = (count == 1) or (count % NOTIFY_INTERVAL == 0)
+if not should_notify:
+    sys.exit(0)
 
 # Extract recent target names from filenames (YYYYMMDD-HHmmss-<name>.json)
 recent = []
@@ -68,9 +83,10 @@ for f in sorted(runs)[-3:]:
         recent.append(parts[2])
 
 hint = ", ".join(recent) if recent else "prior targets"
+read_note = f" [read #{count}]" if count > 1 else ""
 print(
-    f"\n[csharp-explorer] {len(runs)} prior run(s) stored for \"{project}\" "
-    f"({hint}).\n"
+    f"\n[csharp-explorer] {len(runs)} prior run(s) for \"{project}\" "
+    f"({hint}){read_note}.\n"
     f"  Analyze:   /csharp-explorer <ClassName>\n"
     f"  Diagram:   /csharp-explorer show\n"
     f"  Setup:     /csharp-explorer init\n"
