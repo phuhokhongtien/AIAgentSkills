@@ -17,7 +17,7 @@ description: >
   "what is X", "show me X", "analyze X", "understand X".
   This skill loads prior knowledge from a persistent store — invoke it even
   for repeat questions to benefit from cached call graph data.
-version: 0.1.3
+version: 0.1.4
 tools: Read, Glob, Grep, Write, AskUserQuestion
 ---
 
@@ -459,9 +459,15 @@ Hook script:  ~/.claude/csharp-explorer/hook.py
 Settings:     ~/.claude/settings.json  [hook added]
 
 How it works:
-  • Fires after any Read or Grep on a .cs file
-  • Checks ~/.claude/csharp-explorer/<project>/ for prior runs
-  • Prints a one-time reminder per session when data exists
+  Mode A — Auto-analyze (unanalyzed .cs files):
+    • AI reads SomeClass.cs not yet in the store
+    • Hook prints: INSTRUCTION: Run /csharp-explorer SomeClass
+    • Claude runs the analysis immediately → store grows passively
+    • Skips: generated files, Program.cs, Startup.cs, test files
+
+  Mode B — Read-count reminder (already-analyzed + all other files):
+    • Notifies on read #1, then every 15 reads
+    • Ensures long context sessions keep getting reminders
 
 Next steps:
   • Open any C# project and ask about a class to start building your store
