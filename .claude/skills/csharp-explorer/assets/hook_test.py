@@ -1,21 +1,23 @@
 """
-Virtual test for csharp-explorer hook.py (v0.1.3)
+Virtual test for csharp-explorer hook.py (v0.1.4)
 
-Tests:
-  1. Non-.cs file read triggers notification (bug fix)
-  2. First read always notifies
-  3. Reads 2-14 are silent
-  4. Read 15 re-notifies (NOTIFY_INTERVAL)
-  5. Read 30 re-notifies again
-  6. Project with no store -> always silent
-  7. Grep on non-.cs file triggers notification
-  8. Mixed file types across a realistic session (Suite 5)
-  9. Multi-turn back-and-fork conversation simulation (Suite 6)
-  10. Grep + Read interleaved — all tool types counted (Suite 7)
+Two-mode behavior under test:
+  Mode A — Auto-analyze: Read <unanalyzed>.cs  → print INSTRUCTION to Claude
+  Mode B — Read-count:   Everything else        → notify at read #1, every 15 reads
+
+Suites:
+  1. Mode B fires for all non-.cs file types
+  2. Mode B read-count re-notification (NOTIFY_INTERVAL=15) — Mode B files only
+  3. No store -> always silent
+  4. Unknown project -> always silent
+  5. Mixed session — Mode A and Mode B are independent (don't interfere)
+  6. Multi-turn back-and-fork — Mode B counter persists across conversation turns
+  7. Grep + Read interleaved — Grep counts toward Mode B interval
+  8. Auto-analyze (Mode A) — unanalyzed .cs, skip list, already-analyzed fallthrough
 
 Run: python hook_test.py
 """
-import os, json, sys, tempfile, shutil, subprocess, textwrap
+import os, json, sys, tempfile, shutil, subprocess
 from pathlib import Path
 
 PASS = "\033[92mPASS\033[0m"
@@ -24,14 +26,15 @@ HEAD = "\033[94m"
 RESET = "\033[0m"
 BOLD = "\033[1m"
 
+
 # ── Extract hook source from hook-setup.md ────────────────────────────────────
 def extract_hook_source():
     md = Path(__file__).parent.parent / "references" / "hook-setup.md"
     src = md.read_text(encoding="utf-8")
-    # Extract content between first ```python and first closing ```
     start = src.index("```python\n") + len("```python\n")
     end = src.index("\n```", start)
     return src[start:end]
+
 
 # ── Test harness ──────────────────────────────────────────────────────────────
 class HookTestEnv:
@@ -40,10 +43,9 @@ class HookTestEnv:
         self.project_name = project_name
         self.project_slug = project_name.lower().replace(" ", "-").replace(".", "-")
 
-        # Write hook.py
+        # Write hook.py with home dir overridden to tmpdir
         self.hook_path = self.tmpdir / "hook.py"
         hook_src = extract_hook_source()
-        # Override home dir to use tmpdir
         hook_src = hook_src.replace(
             'os.path.expanduser("~")',
             f'"{str(self.tmpdir).replace(chr(92), "/")}"'
@@ -57,9 +59,10 @@ class HookTestEnv:
         # Create store with mock runs
         store = self.tmpdir / ".claude" / "csharp-explorer" / self.project_slug
         store.mkdir(parents=True)
+        names = ["OrderService", "PaymentService", "CustomerController"]
         for i in range(num_runs):
-            names = ["OrderService", "PaymentService", "CustomerController"]
-            (store / f"2026052{i+1}-090000-{names[i % 3]}.json").write_text(
+            fname = f"2026052{i+1}-090000-{names[i % 3]}.json"
+            (store / fname).write_text(
                 json.dumps({"target": {"name": names[i % 3]}}), encoding="utf-8"
             )
 
@@ -76,9 +79,7 @@ class HookTestEnv:
         }
         result = subprocess.run(
             [sys.executable, str(self.hook_path)],
-            env=env,
-            capture_output=True,
-            text=True,
+            env=env, capture_output=True, text=True,
             cwd=str(self.project_dir),
         )
         return result.stdout.strip()
@@ -111,73 +112,111 @@ def run_tests():
             print(f"       {RESET}\033[90m{snippet[:90]}{RESET}")
         results.append(ok)
 
-    # ── Suite 1: File-type filter removal ────────────────────────────────────
-    print(f"\n{BOLD}{HEAD}Suite 1 — File-type filter removed{RESET}")
+    # ── Suite 1: Mode B fires for all non-.cs file types ─────────────────────
+    # Non-.cs files always go to Mode B (read-count). Program.cs is in skip list
+    # so it exits silently in v0.1.4. Already-analyzed .cs falls through to Mode B.
+    print(f"\n{BOLD}{HEAD}Suite 1 — Mode B fires for all non-.cs file types{RESET}")
     env1 = HookTestEnv("myshop", num_runs=2)
 
     out = env1.run_hook(tool_name="Read", file_path="appsettings.json")
-    check("Read appsettings.json -> notifies (non-.cs file)", out, expect_notify=True,
-          note="hook now fires for any file type")
-
-    env1.reset_lock()
-    out = env1.run_hook(tool_name="Read", file_path="Program.cs")
-    check("Read Program.cs -> notifies (.cs file, baseline)", out, expect_notify=True)
+    check("Read appsettings.json -> Mode B notify", out, expect_notify=True,
+          note="non-.cs file goes straight to Mode B")
 
     env1.reset_lock()
     out = env1.run_hook(tool_name="Read", file_path="README.md")
-    check("Read README.md -> notifies (markdown file)", out, expect_notify=True)
+    check("Read README.md -> Mode B notify", out, expect_notify=True)
 
     env1.reset_lock()
     out = env1.run_hook(tool_name="Read", file_path="docker-compose.yml")
-    check("Read docker-compose.yml -> notifies (any file)", out, expect_notify=True)
+    check("Read docker-compose.yml -> Mode B notify", out, expect_notify=True)
+
+    env1.reset_lock()
+    # Already-analyzed .cs: OrderService is in the store → falls through to Mode B
+    out = env1.run_hook(tool_name="Read", file_path="src/Services/OrderService.cs")
+    check("Read OrderService.cs (analyzed) -> Mode B notify", out, expect_notify=True,
+          note="already-analyzed .cs falls through to Mode B")
 
     env1.reset_lock()
     out = env1.run_hook(tool_name="Grep", file_path="", glob_pattern="**/*.ts",
                         grep_path="src/")
-    check("Grep *.ts -> notifies (non-.cs glob)", out, expect_notify=True)
+    check("Grep *.ts -> Mode B notify", out, expect_notify=True)
+
+    # Program.cs is in skip list → silent in v0.1.4
+    env1.reset_lock()
+    out = env1.run_hook(tool_name="Read", file_path="Program.cs")
+    check("Read Program.cs -> silent (skip list in v0.1.4)", out, expect_notify=False)
 
     env1.cleanup()
 
-    # ── Suite 2: Read-count re-notification ───────────────────────────────────
-    print(f"\n{BOLD}{HEAD}Suite 2 — Read-count re-notification (NOTIFY_INTERVAL=15){RESET}")
+    # ── Suite 2: Mode B read-count re-notification ────────────────────────────
+    # Uses only Mode B files (non-.cs + already-analyzed .cs) to test read-count.
+    # Unanalyzed .cs are NOT used here — they trigger Mode A and bypass the counter.
+    print(f"\n{BOLD}{HEAD}Suite 2 — Mode B read-count re-notification (NOTIFY_INTERVAL=15){RESET}")
     env2 = HookTestEnv("bigproject", num_runs=5)
+    # Store has: OrderService (x2), PaymentService (x2), CustomerController (x1)
+    # Mode B files: any non-.cs file, or OrderService/PaymentService/CustomerController .cs
+
+    # Alternate non-.cs and analyzed .cs to exercise both paths
+    mode_b_files = [
+        "appsettings.json",                # non-.cs
+        "OrderService.cs",                  # analyzed -> Mode B
+        "PaymentService.cs",                # analyzed -> Mode B
+        "README.md",                        # non-.cs
+        "CustomerController.cs",            # analyzed -> Mode B
+        "docker-compose.yml",               # non-.cs
+        "OrderService.cs",                  # analyzed (duplicate ok — count still ticks)
+        "global.json",                      # non-.cs
+        "PaymentService.cs",                # analyzed
+        "appsettings.Development.json",     # non-.cs
+        "CustomerController.cs",            # analyzed
+        "Dockerfile",                       # non-.cs
+        "OrderService.cs",                  # analyzed
+        "PaymentService.cs",                # analyzed
+        "CustomerController.cs",            # analyzed  ← read #15
+    ]
 
     # Read 1 -> notify
-    out = env2.run_hook(file_path="appsettings.json")
-    check("Read #1 -> notify (first read)", out, expect_notify=True, note="initial notification")
+    out = env2.run_hook(file_path=mode_b_files[0])
+    check("Read #1 (appsettings.json) -> notify", out, expect_notify=True,
+          note="first Mode B read")
 
     # Reads 2-14 -> silent
     silent_ok = True
-    for i in range(2, 15):
-        out = env2.run_hook(file_path=f"file{i}.cs")
+    for i, fname in enumerate(mode_b_files[1:14], start=2):
+        out = env2.run_hook(file_path=fname)
         if "[csharp-explorer]" in out:
             silent_ok = False
-            print(f"  {FAIL} Read #{i} should be silent but notified!")
+            print(f"  {FAIL} Read #{i} ({fname}) should be silent but notified!")
     status = PASS if silent_ok else FAIL
-    print(f"  {status} Reads #2-14 -> all silent (13 reads checked)")
+    print(f"  {status} Reads #2-14 -> all silent (13 reads, mix of .cs + non-.cs)")
     results.append(silent_ok)
 
     # Read 15 -> re-notify
-    out = env2.run_hook(file_path="OrderService.cs")
-    check("Read #15 -> re-notify (NOTIFY_INTERVAL hit)", out, expect_notify=True,
-          note="periodic re-notification for long sessions")
+    out = env2.run_hook(file_path=mode_b_files[14])
+    check("Read #15 (CustomerController.cs analyzed) -> re-notify", out, expect_notify=True,
+          note="NOTIFY_INTERVAL hit")
 
-    # Reads 16-29 -> silent
+    # Reads 16-29 -> silent (using another round of Mode B files)
+    mode_b_r2 = [
+        "appsettings.json", "OrderService.cs", "README.md", "PaymentService.cs",
+        "Dockerfile", "CustomerController.cs", "global.json", "OrderService.cs",
+        "docker-compose.yml", "PaymentService.cs", "README.md", "CustomerController.cs",
+        "appsettings.Development.json", "OrderService.cs",
+    ]
     silent_ok2 = True
-    for i in range(16, 30):
-        out = env2.run_hook(file_path=f"file{i}.json")
+    for i, fname in enumerate(mode_b_r2, start=16):
+        out = env2.run_hook(file_path=fname)
         if "[csharp-explorer]" in out:
             silent_ok2 = False
     status = PASS if silent_ok2 else FAIL
     print(f"  {status} Reads #16-29 -> all silent (14 reads checked)")
     results.append(silent_ok2)
 
-    # Read 30 -> re-notify
-    out = env2.run_hook(file_path="Startup.cs")
+    # Read 30 -> re-notify with label
+    out = env2.run_hook(file_path="CustomerController.cs")
     check("Read #30 -> re-notify (2nd interval)", out, expect_notify=True,
           note="[read #30] label in output")
 
-    # Verify [read #N] label present on re-notify
     has_label = "[read #30]" in out or "read #30" in out
     status = PASS if has_label else FAIL
     print(f"  {status} Re-notify includes [read #30] label")
@@ -188,196 +227,174 @@ def run_tests():
     # ── Suite 3: No store -> always silent ────────────────────────────────────
     print(f"\n{BOLD}{HEAD}Suite 3 — No store -> always silent{RESET}")
     env3 = HookTestEnv("emptyproject", num_runs=0)
-    # Remove the store dir (num_runs=0 creates dir but no .json files)
     out = env3.run_hook(file_path="Program.cs")
-    check("No runs in store -> silent", out, expect_notify=False)
+    check("No runs in store -> silent (.cs file)", out, expect_notify=False)
     out = env3.run_hook(file_path="appsettings.json")
-    check("No runs in store, non-.cs -> silent", out, expect_notify=False)
+    check("No runs in store -> silent (non-.cs file)", out, expect_notify=False)
     env3.cleanup()
 
     # ── Suite 4: Unknown project (no store dir) ───────────────────────────────
     print(f"\n{BOLD}{HEAD}Suite 4 — Unknown project (store dir missing){RESET}")
     env4 = HookTestEnv("unknownproject", num_runs=2)
-    # Run hook from a different cwd (not the project with the store)
     other_dir = env4.tmpdir / "otherproject"
     other_dir.mkdir()
     result = subprocess.run(
         [sys.executable, str(env4.hook_path)],
         env={**os.environ, "TOOL_NAME": "Read",
              "TOOL_INPUT": json.dumps({"file_path": "Program.cs"})},
-        capture_output=True, text=True,
-        cwd=str(other_dir),
+        capture_output=True, text=True, cwd=str(other_dir),
     )
     out = result.stdout.strip()
     check("Different project cwd -> silent (no store match)", out, expect_notify=False)
     env4.cleanup()
 
-    # ── Suite 5: Mixed file types — realistic session ─────────────────────────
-    # Simulates what actually happens when an AI works through a C# codebase:
-    # reads span config, source, docs, infra, and frontend files in one session.
-    print(f"\n{BOLD}{HEAD}Suite 5 — Mixed file types across a realistic session{RESET}")
+    # ── Suite 5: Mixed session — Mode A and Mode B independence ──────────────
+    # Verifies that Mode A (INSTRUCTION for new classes) and Mode B (read-count)
+    # are completely independent. Mode A reads do NOT increment the Mode B counter.
+    print(f"\n{BOLD}{HEAD}Suite 5 — Mixed session: Mode A + Mode B independence{RESET}")
     env5 = HookTestEnv("ecommerce", num_runs=4)
+    # Store: OrderService (x2), PaymentService, CustomerController
 
-    # All common file types a C# project session would touch
-    session_files = [
-        # Phase 1 — project setup / orientation
-        ("Read",  "appsettings.json",               ""),
-        ("Read",  "appsettings.Development.json",   ""),
-        ("Read",  "Program.cs",                     ""),
-        ("Read",  "Startup.cs",                     ""),
-        # Phase 2 — domain exploration
-        ("Read",  "src/Services/OrderService.cs",   ""),
-        ("Read",  "src/Models/Order.cs",            ""),
-        ("Read",  "src/Dtos/CreateOrderDto.cs",     ""),
-        ("Read",  "README.md",                      ""),
-        ("Read",  "docs/architecture.md",           ""),
-        ("Read",  "ECommerceApi.csproj",            ""),
-        # Phase 3 — infrastructure / config
-        ("Read",  "docker-compose.yml",             ""),
-        ("Read",  "nginx/nginx.conf",               ""),
-        ("Read",  "Dockerfile",                     ""),
-        ("Read",  ".env.example",                   ""),
-        # Read 15 -> re-notify
-        ("Read",  "ECommerceApi.sln",               ""),
+    # Session mixing Mode A and Mode B reads:
+    #   Mode B: non-.cs files + analyzed .cs → count ticks
+    #   Mode A: unanalyzed .cs → INSTRUCTION printed, count does NOT tick
+    session = [
+        # (tool, file, expect_mode_a_instruction, label)
+        ("Read", "appsettings.json",                   False, "non-.cs → Mode B #1 notify"),
+        ("Read", "OrderService.cs",                    False, "analyzed → Mode B #2 silent"),
+        ("Read", "src/Models/NewClass.cs",             True,  "unanalyzed → Mode A INSTRUCTION"),
+        ("Read", "README.md",                          False, "non-.cs → Mode B #3 silent"),
+        ("Read", "src/Services/UnknownService.cs",     True,  "unanalyzed → Mode A INSTRUCTION"),
+        ("Read", "PaymentService.cs",                  False, "analyzed → Mode B #4 silent"),
+        ("Read", "docker-compose.yml",                 False, "non-.cs → Mode B #5 silent"),
+        ("Read", "src/Dtos/FreshDto.cs",               True,  "unanalyzed → Mode A INSTRUCTION"),
+        ("Read", "CustomerController.cs",              False, "analyzed → Mode B #6 silent"),
+        ("Read", "ECommerceApi.csproj",                False, "non-.cs → Mode B #7 silent"),
     ]
 
-    notify_reads  = {1, 15}          # expected notify positions
-    notify_counts = []               # track actual notify reads
+    mode_a_count = 0
+    mode_b_notifies = 0
+    mode_b_unexpected = False
 
-    for idx, (tool, fpath, _) in enumerate(session_files, start=1):
+    for tool, fpath, expect_instruction, label in session:
         out = env5.run_hook(tool_name=tool, file_path=fpath)
-        notified = "[csharp-explorer]" in out
-        if notified:
-            notify_counts.append(idx)
+        has_instruction = "INSTRUCTION" in out
+        has_notify = "[csharp-explorer]" in out and not has_instruction
 
-    # Expect notified exactly at reads 1 and 15
+        if expect_instruction:
+            mode_a_count += 1 if has_instruction else 0
+            if not has_instruction:
+                print(f"  {FAIL} Expected INSTRUCTION for {fpath} but got: {out[:80]}")
+        else:
+            if has_instruction:
+                mode_b_unexpected = True
+                print(f"  {FAIL} Unexpected INSTRUCTION for {fpath}: {out[:80]}")
+            if has_notify:
+                mode_b_notifies += 1
+
+    expected_mode_a = sum(1 for _, _, e, _ in session if e)
     check(
-        "Mixed types: notified exactly at reads #1 and #15",
-        "[csharp-explorer]" if notify_counts == [1, 15] else "",
-        expect_notify=(notify_counts == [1, 15]),
-        note=f"notified at reads: {notify_counts}",
+        f"Mode A fires for all {expected_mode_a} unanalyzed .cs files",
+        "[csharp-explorer]" if mode_a_count == expected_mode_a else "",
+        expect_notify=True,
     )
-    if notify_counts != [1, 15]:
-        print(f"       actual notify positions: {notify_counts}")
-
-    # Verify each file type individually triggered the count (not silently skipped)
-    # by checking no unexpected extra notifications fired (count would drift)
     check(
-        "Mixed types: no spurious extra notifications (count integrity)",
-        "[csharp-explorer]" if len(notify_counts) == 2 else "",
-        expect_notify=(len(notify_counts) == 2),
+        "Mode B fired exactly once (read #1 of session, non-.cs file)",
+        "[csharp-explorer]" if mode_b_notifies == 1 else "",
+        expect_notify=True,
+    )
+    check(
+        "Mode A reads do NOT cause spurious Mode B notifications",
+        "[csharp-explorer]" if not mode_b_unexpected else "",
+        expect_notify=True,
     )
 
     env5.cleanup()
 
     # ── Suite 6: Multi-turn back-and-fork conversation ────────────────────────
-    # Simulates a long session: user asks about feature A, then forks to bug B,
-    # then back to feature A.  Every file read — regardless of type — must
-    # increment the counter so the re-notification fires at the right moment.
-    print(f"\n{BOLD}{HEAD}Suite 6 — Multi-turn back-and-fork conversation{RESET}")
+    # Verifies Mode B counter persists across conversation turns.
+    # Uses ONLY Mode B files (analyzed .cs + non-.cs) to keep counter test clean.
+    print(f"\n{BOLD}{HEAD}Suite 6 — Multi-turn back-and-fork conversation (Mode B counter){RESET}")
     env6 = HookTestEnv("bookingapp", num_runs=3)
+    # Store: OrderService, PaymentService, CustomerController
 
-    # Each "turn" is a list of (tool_name, file_path) pairs.
-    # Labels show the conversational context — hook sees no difference, just reads.
     turns = [
         # Turn 1: user asks "explain the booking flow"
         [("Read", "README.md"),
-         ("Read", "src/Services/BookingService.cs"),
-         ("Read", "src/Controllers/BookingController.cs")],
+         ("Read", "OrderService.cs"),          # analyzed
+         ("Read", "PaymentService.cs")],        # analyzed
         # Turn 2: user forks — "why does payment fail sometimes?"
-        [("Read", "src/Services/PaymentService.cs"),
-         ("Read", "appsettings.json"),
-         ("Read", "src/Models/PaymentResult.cs"),
-         ("Read", "tests/PaymentServiceTests.cs")],
-        # Turn 3: back to booking — "show me the DTO"
-        [("Read", "src/Dtos/BookingDto.cs"),
-         ("Read", "src/Dtos/CreateBookingRequest.cs"),
-         ("Read", "src/Validators/BookingValidator.cs")],
+        [("Read", "appsettings.json"),
+         ("Read", "CustomerController.cs"),    # analyzed
+         ("Read", "docker-compose.yml"),
+         ("Read", "OrderService.cs")],         # analyzed
+        # Turn 3: back to booking — "show me the controller"
+        [("Read", "PaymentService.cs"),        # analyzed
+         ("Read", "README.md"),
+         ("Read", "CustomerController.cs")],   # analyzed
         # Turn 4: user asks about infra — forks again
-        [("Read", "docker-compose.yml"),
-         ("Read", "BookingApp.csproj"),
+        [("Read", "Dockerfile"),
+         ("Read", "OrderService.cs"),          # analyzed
          ("Read", "global.json")],
-        # Turn 5: back to main thread — "check the tests" (reads 14-15)
-        [("Read", "tests/BookingServiceTests.cs"),
-         ("Read", "tests/IntegrationTests.cs")],
-        # Read 15 lands at the last file of turn 5 — should re-notify
+        # Turn 5: back to main thread — final reads (#14 and #15)
+        [("Read", "PaymentService.cs"),        # analyzed — read #14
+         ("Read", "CustomerController.cs")],   # analyzed — read #15 → re-notify
     ]
 
-    flat_reads    = [(t, f) for turn in turns for t, f in turn]  # 15 reads total
-    turn_boundaries = []
-    pos = 0
-    for i, turn in enumerate(turns):
-        pos += len(turn)
-        turn_boundaries.append(pos)
-
+    flat = [(t, f) for turn in turns for t, f in turn]  # exactly 15 reads
     notify_positions = []
-    for idx, (tool, fpath) in enumerate(flat_reads, start=1):
+    for idx, (tool, fpath) in enumerate(flat, start=1):
         out = env6.run_hook(tool_name=tool, file_path=fpath)
         if "[csharp-explorer]" in out:
             notify_positions.append(idx)
 
-    # Hardcoded expected values — these are the invariants we want to enforce,
-    # not a tautological check against what happened.
-    actual_out_1  = "[csharp-explorer]" if 1  in notify_positions else ""
-    actual_out_15 = "[csharp-explorer]" if 15 in notify_positions else ""
-    mid_silent    = not any(2 <= p <= 14 for p in notify_positions)
-
     check(
-        "Multi-turn: notified at read #1 (first file across all turns)",
-        actual_out_1, expect_notify=True,
+        "Multi-turn: notified at read #1 (README.md, turn 1)",
+        "[csharp-explorer]" if 1 in notify_positions else "",
+        expect_notify=True,
     )
     check(
-        "Multi-turn: notified at read #15 (crosses turn boundary, last file of turn 5)",
-        actual_out_15, expect_notify=True,
+        "Multi-turn: notified at read #15 (last file of turn 5, crosses boundary)",
+        "[csharp-explorer]" if 15 in notify_positions else "",
+        expect_notify=True,
     )
     check(
-        "Multi-turn: silent between #2 and #14 (13 inter-turn reads)",
-        "[csharp-explorer]" if mid_silent else "notified", expect_notify=True,
+        "Multi-turn: silent between reads #2-14 (across all forks and turns)",
+        "[csharp-explorer]" if not any(2 <= p <= 14 for p in notify_positions) else "spurious",
+        expect_notify=True,
     )
     if notify_positions != [1, 15]:
         print(f"       actual notify positions: {notify_positions}")
 
-    # Verify [read #15] label appears in the re-notification
-    # Re-run read #15 to capture output (count is now 16 inside env6,
-    # so we check the last captured output from the loop above)
-    # Instead: run one more read now (read #16 would be silent).
-    # To verify label, we need read #15 output — captured via notify_positions check above.
-    # We already verified it notified; label check is done in Suite 2, so just note it.
-
     env6.cleanup()
 
     # ── Suite 7: Grep + Read interleaved ─────────────────────────────────────
-    # Verifies that Grep calls (any glob/path) are counted alongside Read calls.
-    # In a real session AI alternates: Read file → Grep for usages → Read another file
-    print(f"\n{BOLD}{HEAD}Suite 7 — Grep + Read interleaved (all tools counted){RESET}")
+    # Verifies Grep calls count toward Mode B interval alongside Read calls.
+    # Uses analyzed .cs + non-.cs + Grep (all Mode B) to keep counter clean.
+    print(f"\n{BOLD}{HEAD}Suite 7 — Grep + Read interleaved (all Mode B){RESET}")
     env7 = HookTestEnv("microservice", num_runs=2)
+    # Store: OrderService, PaymentService
 
     interleaved = [
-        # Read 1 — notify
-        ("Read",  "appsettings.json",         "",            ""),
-        # Reads 2-5 — mix of Read and Grep
-        ("Read",  "Program.cs",               "",            ""),
-        ("Grep",  "",                         "**/*.cs",     "src/"),
-        ("Read",  "src/Services/UserSvc.cs",  "",            ""),
-        ("Grep",  "",                         "**/*.json",   "config/"),
-        # Reads 6-10
-        ("Read",  "src/Models/User.cs",       "",            ""),
-        ("Grep",  "",                         "**/*.csproj", "."),
-        ("Read",  "README.md",                "",            ""),
-        ("Grep",  "",                         "**/*.yml",    "."),
-        ("Read",  "docker-compose.yml",       "",            ""),
-        # Reads 11-14
-        ("Read",  "Dockerfile",               "",            ""),
-        ("Grep",  "",                         "**/*.md",     "docs/"),
-        ("Read",  "global.json",              "",            ""),
-        ("Grep",  "",                         "**/*.xml",    "nuget/"),
-        # Read 15 — re-notify
-        ("Read",  "MicroService.csproj",      "",            ""),
+        ("Read",  "appsettings.json",        "",             ""),    # #1 notify
+        ("Read",  "OrderService.cs",         "",             ""),    # #2 analyzed→Mode B
+        ("Grep",  "",                        "**/*.cs",      "src/"),# #3
+        ("Read",  "PaymentService.cs",       "",             ""),    # #4 analyzed→Mode B
+        ("Grep",  "",                        "**/*.json",    "cfg/"),# #5
+        ("Read",  "README.md",               "",             ""),    # #6
+        ("Grep",  "",                        "**/*.csproj",  "."),   # #7
+        ("Read",  "docker-compose.yml",      "",             ""),    # #8
+        ("Grep",  "",                        "**/*.yml",     "."),   # #9
+        ("Read",  "OrderService.cs",         "",             ""),    # #10 analyzed
+        ("Read",  "Dockerfile",              "",             ""),    # #11
+        ("Grep",  "",                        "**/*.md",      "docs/"),# #12
+        ("Read",  "global.json",             "",             ""),    # #13
+        ("Grep",  "",                        "**/*.xml",     "pkg/"),# #14
+        ("Read",  "PaymentService.cs",       "",             ""),    # #15 re-notify
     ]
 
-    notify_pos7   = []
-    tool_log      = []  # (idx, tool) for debugging
-
+    notify_pos7 = []
+    tool_log    = []
     for idx, (tool, fpath, glob, gpath) in enumerate(interleaved, start=1):
         out = env7.run_hook(tool_name=tool, file_path=fpath,
                             glob_pattern=glob, grep_path=gpath)
@@ -385,47 +402,118 @@ def run_tests():
         if "[csharp-explorer]" in out:
             notify_pos7.append(idx)
 
-    grep_reads   = [i for i, t in tool_log if t == "Grep"]
-    read_reads   = [i for i, t in tool_log if t == "Read"]
+    grep_count = sum(1 for _, t in tool_log if t == "Grep")
+    read_count = sum(1 for _, t in tool_log if t == "Read")
 
     check(
-        "Grep+Read mix: notified at read #1 (Read tool)",
+        "Grep+Read mix: notified at read #1",
         "[csharp-explorer]" if 1 in notify_pos7 else "",
-        expect_notify=(1 in notify_pos7),
+        expect_notify=True,
     )
     check(
         "Grep+Read mix: silent between #2 and #14 (mixed tools)",
-        "[csharp-explorer]" if not any(2 <= p <= 14 for p in notify_pos7) else "",
-        expect_notify=not any(2 <= p <= 14 for p in notify_pos7),
+        "[csharp-explorer]" if not any(2 <= p <= 14 for p in notify_pos7) else "spurious",
+        expect_notify=True,
     )
     check(
-        "Grep+Read mix: re-notified at read #15 (Grep calls count too)",
+        "Grep+Read mix: re-notified at #15 (Grep calls counted too)",
         "[csharp-explorer]" if 15 in notify_pos7 else "",
-        expect_notify=(15 in notify_pos7),
+        expect_notify=True,
     )
-    # Verify we actually exercised Grep calls (sanity check on test design)
-    grep_exercised = len(grep_reads) >= 5
-    status = PASS if grep_exercised else FAIL
-    print(f"  {status} Grep calls exercised: {len(grep_reads)} Greps + {len(read_reads)} Reads in sequence")
-    results.append(grep_exercised)
-
+    status = PASS if grep_count >= 5 else FAIL
+    print(f"  {status} Exercised {grep_count} Greps + {read_count} Reads in sequence")
+    results.append(grep_count >= 5)
     if notify_pos7 != [1, 15]:
         print(f"       actual notify positions: {notify_pos7}")
 
     env7.cleanup()
+
+    # ── Suite 8: Auto-analyze Mode A ─────────────────────────────────────────
+    # Tests the v0.1.4 Mode A behavior: unanalyzed .cs → INSTRUCTION.
+    print(f"\n{BOLD}{HEAD}Suite 8 — Auto-analyze instruction (v0.1.4 Mode A){RESET}")
+    env8 = HookTestEnv("salonapp", num_runs=3)
+    # Store: OrderService, PaymentService, CustomerController
+
+    # 8a: Unanalyzed .cs → INSTRUCTION printed with class name
+    out = env8.run_hook(tool_name="Read", file_path="src/Services/SalonDbContext.cs")
+    has_inst = "INSTRUCTION" in out and "SalonDbContext" in out
+    check("Read unanalyzed SalonDbContext.cs -> INSTRUCTION",
+          "[csharp-explorer]" if has_inst else "", expect_notify=True)
+
+    # 8b: Another unanalyzed class in a subdirectory
+    out = env8.run_hook(tool_name="Read", file_path="src/Repositories/BookingRepository.cs")
+    has_inst2 = "INSTRUCTION" in out and "BookingRepository" in out
+    check("Read unanalyzed BookingRepository.cs -> INSTRUCTION",
+          "[csharp-explorer]" if has_inst2 else "", expect_notify=True)
+
+    # 8c: Already-analyzed class → Mode B (first read → notify, no INSTRUCTION)
+    env8.reset_lock()
+    out = env8.run_hook(tool_name="Read", file_path="src/Services/OrderService.cs")
+    is_mode_b = "[csharp-explorer]" in out and "INSTRUCTION" not in out
+    check("Read already-analyzed OrderService.cs -> Mode B notify (no INSTRUCTION)",
+          "[csharp-explorer]" if is_mode_b else "", expect_notify=True)
+
+    # 8d: Method-level analysis stored → class still treated as analyzed
+    # Store has "OrderService" → "orderservice" matches class_key for OrderService.cs ✓
+    # Verify PaymentService.cs also treated as analyzed (it's in store)
+    env8.reset_lock()
+    out = env8.run_hook(tool_name="Read", file_path="PaymentService.cs")
+    is_mode_b2 = "[csharp-explorer]" in out and "INSTRUCTION" not in out
+    check("Read already-analyzed PaymentService.cs -> Mode B (no INSTRUCTION)",
+          "[csharp-explorer]" if is_mode_b2 else "", expect_notify=True)
+
+    # 8e–8j: Skip list — all should be silent
+    skip_cases = [
+        ("Program.cs",                          "Program.cs (skip: program)"),
+        ("GlobalUsings.cs",                     "GlobalUsings.cs (skip: globalusings)"),
+        ("Startup.cs",                          "Startup.cs (skip: startup)"),
+        ("Migrations/20260101_AddOrders.cs",    "Migration path (skip: migrations/ dir)"),
+        ("Something.g.cs",                      "Something.g.cs (skip: .g generated)"),
+        ("Form.Designer.cs",                    "Form.Designer.cs (skip: .designer)"),
+    ]
+    for fpath, label in skip_cases:
+        out = env8.run_hook(tool_name="Read", file_path=fpath)
+        check(f"Read {label} -> silent", out, expect_notify=False)
+
+    # 8k: Test files → silent (never auto-analyze test classes)
+    test_cases = [
+        ("tests/Services/OrderServiceTests.cs", "OrderServiceTests.cs (test)"),
+        ("tests/BookingServiceSpec.cs",         "BookingServiceSpec.cs (spec)"),
+        ("mocks/MockPaymentGateway.cs",         "MockPaymentGateway.cs (mock)"),
+    ]
+    for fpath, label in test_cases:
+        out = env8.run_hook(tool_name="Read", file_path=fpath)
+        check(f"Read {label} -> silent", out, expect_notify=False)
+
+    # 8l: Empty store → Mode A never fires (no prior runs = silent for everything)
+    env_empty = HookTestEnv("brandnewproject", num_runs=0)
+    out = env_empty.run_hook(tool_name="Read", file_path="src/NewService.cs")
+    check("Read unanalyzed .cs, empty store -> silent (needs prior runs)",
+          out, expect_notify=False)
+    env_empty.cleanup()
+
+    # 8m: Grep tool → always Mode B (auto-analyze only on Read of .cs)
+    env8.reset_lock()
+    out = env8.run_hook(tool_name="Grep", file_path="", glob_pattern="**/*.cs",
+                        grep_path="src/")
+    is_mode_b_grep = "[csharp-explorer]" in out and "INSTRUCTION" not in out
+    check("Grep **/*.cs -> Mode B notify (not Mode A)",
+          "[csharp-explorer]" if is_mode_b_grep else "", expect_notify=True)
+
+    env8.cleanup()
 
     # ── Summary ───────────────────────────────────────────────────────────────
     total = len(results)
     passed = sum(results)
     print(f"\n{BOLD}Results: {passed}/{total} passed{RESET}")
     if passed == total:
-        print(f"{PASS} -- All tests passed -- hook v0.1.3 behaves correctly")
+        print(f"{PASS} -- All tests passed -- hook v0.1.4 behaves correctly")
     else:
         print(f"{FAIL} -- {total - passed} test(s) failed")
         sys.exit(1)
 
 
 if __name__ == "__main__":
-    print(f"{BOLD}csharp-explorer hook.py — Virtual Test Suite (v0.1.3){RESET}")
+    print(f"{BOLD}csharp-explorer hook.py — Virtual Test Suite (v0.1.4){RESET}")
     print("=" * 55)
     run_tests()

@@ -25,7 +25,7 @@ Debug any API endpoint by tracing the full request flow — from curl to respons
 - **Precise log parsing**: ANSI-stripping pre-processor → canonical clean log; anchored per-framework patterns replace naive `grep SELECT|INSERT` (eliminates false positives from stack traces and JSON request bodies); ripgrep multiline for multi-line query blocks
 - **Rich DB Queries dashboard**: interactive table with expandable rows, CSS-only SQL syntax highlight, filter (All / Slow / N+1), sort, search, copy-SQL button, timeline strip, N+1 shape-group color coding
 
-### `csharp-explorer` — v0.1.3
+### `csharp-explorer` — v0.1.4
 
 Analyze any C# class or method in depth — trace its **call graph**, understand its **DI wiring**, detect **async anti-patterns**, and build up knowledge **day by day** across multiple sessions. Results persist in a global store and can be visualized on demand as an interactive unified diagram.
 
@@ -43,6 +43,7 @@ Analyze any C# class or method in depth — trace its **call graph**, understand
 - **Chunking-first reads**: Grep → line number → `Read` with exact `offset`/`limit` — never reads a full file blindly
 - **BFS call graph**: configurable depth (1–4), 50-node cap, cycle detection, partial class identity by `(namespace, class_name)`
 - **C# specifics**: DI injection detection, async/await analysis, partial classes, EF Core / HttpClient / MediatR patterns, layer classification (controller/service/repository/domain/handler/…)
+- **Passive auto-capture** (v0.1.4): hook detects any unanalyzed `.cs` file read and injects an INSTRUCTION telling Claude to run `/csharp-explorer <ClassName>` immediately — store grows automatically as Claude explores the codebase
 - **Append-only global store**: each run saves JSON to `~/.claude/csharp-explorer/<project>/` — accumulates across sessions
 - **On-demand diagram** (`csharp-explorer show`): merges all stored runs, deduplicates by `(namespace, class, method)`, renders a force-directed interactive SVG with run timeline, filter controls, and stale-node detection
 
@@ -384,7 +385,7 @@ AIAgentSkills/
 ├── skills/                            ← source-of-truth mirror of .claude/skills/
 │   ├── api-flow-debugger/
 │   ├── agent-debate-team/
-│   ├── csharp-explorer/               ← v0.1.3 — hook fires for any file type, read-count re-notification
+│   ├── csharp-explorer/               ← v0.1.4 — auto-analyze unanalyzed .cs files, Mode A + Mode B hook
 │   ├── testing-explorer/
 │   ├── testing-strategy/              ← v0.1.2 — testing strategy advisor (scope + overlap)
 │   ├── agent-forge-team/              ← includes references/ticket-ingestion.md (v0.2.0)
@@ -435,6 +436,13 @@ AIAgentSkills/
 ---
 
 ## Release Notes
+
+### 2026-05-27 — `csharp-explorer` v0.1.4 (update)
+- **Auto-analyze hook (Mode A)**: when AI reads an unanalyzed `.cs` file in a project with prior runs, hook injects `INSTRUCTION: Run /csharp-explorer <ClassName>` — Claude acts on it immediately, passively growing the store as it explores the codebase
+- **Skip list**: Program.cs, Startup.cs, GlobalUsings.cs, generated files (`.g.cs`, `.Designer.cs`), Migration files (by path), test/spec/mock files — never auto-analyzed
+- **Exact match for "already analyzed"**: uses `YYYYMMDD-HHmmss-<name>.json` filename parsing; `Order.cs` no longer falsely matched by `OrderService` in store
+- **Mode A independent of Mode B**: unanalyzed `.cs` reads do not increment the read-count re-notification counter
+- **Test suite expanded**: 40/40 assertions across 8 suites
 
 ### 2026-05-27 — `csharp-explorer` v0.1.3 (update)
 - **Fix hook file-type filter**: hook now fires after ANY Read/Grep (was silently skipping `appsettings.json`, `README.md`, `.csproj`, etc. — only fired for `.cs` files)
