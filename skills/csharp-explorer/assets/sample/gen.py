@@ -87,25 +87,11 @@ sample = {
   }
 }
 
-filled = template.replace("{{REPORT_JSON}}", json.dumps(sample))
-replacements = {
-    "{{PROJECT_NAME}}": "MyShop",
-    "{{TARGET_NAME}}": "OrderService.CreateOrder",
-    "{{TARGET_KIND}}": "method",
-    "{{TARGET_FILE}}": "src/Services/OrderService.cs",
-    "{{TARGET_LINE}}": "47",
-    "{{NAMESPACE}}": "MyShop.Services",
-    "{{LAYER}}": "service",
-    "{{BOUNDARY_TYPE}}": "domain-core",
-    "{{CALLER_COUNT}}": "4",
-    "{{CALLEE_COUNT}}": "4",
-    "{{EXTERNAL_IO_COUNT}}": "3",
-    "{{CONCERN_COUNT}}": "0",
-    "{{KEY_INSIGHT}}": "Core business logic node: 4 callers and 3 external I/O dependencies",
-    "{{TIMESTAMP}}": "2026-05-26 10:30 UTC",
-}
-for k, v in replacements.items():
-    filled = filled.replace(k, v)
+# Write data.json (fetched by index.html via HTTP server)
+pathlib.Path('data.json').write_text(json.dumps(sample, indent=2), encoding='utf-8')
 
-pathlib.Path('index.html').write_text(filled, encoding='utf-8')
-print("Done, size:", len(filled))
+# Copy template as-is (no token replacement needed — all data comes from data.json)
+pathlib.Path('index.html').write_text(template, encoding='utf-8')
+print("Done — data.json:", len(json.dumps(sample)), "bytes | index.html:", len(template), "bytes")
+print("Serve with: python -m http.server 7656 --directory .")
+print("Open: http://localhost:7656/")

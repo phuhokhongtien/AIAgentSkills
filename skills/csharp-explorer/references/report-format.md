@@ -181,7 +181,14 @@ Used in `assets/report-template.html`. All tokens use `{{TOKEN}}` syntax.
 | `{{TIMESTAMP}}` | `report.timestamp` formatted as `YYYY-MM-DD HH:mm UTC` |
 | `{{REPORT_JSON}}` | Full serialized `report` object — injected into `<script>` block, must NOT be HTML-escaped |
 
-All other token values MUST be HTML-escaped (`<` → `&lt;`, `>` → `&gt;`, `"` → `&quot;`, `&` → `&amp;`) before substitution. `{{REPORT_JSON}}` is the exception — it goes directly into a `<script>` block and must be valid JSON.
+**v0.1.2 note**: The template no longer uses `{{PLACEHOLDER}}` token injection. All placeholders above are now read dynamically from `data.json` via `fetch()`. Phase S writes `data.json` and copies the template as-is — no substitution step required.
+
+---
+
+**Strip rule (applied when building data.json for the report server)**:
+- Per node: `body_full` deleted; `body_preview` truncated to 400 chars
+- Per callee: `raw_line` deleted
+- Original per-run `.json` store files are never modified — full data always available there
 
 ---
 

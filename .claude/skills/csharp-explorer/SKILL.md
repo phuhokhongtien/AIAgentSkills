@@ -17,7 +17,7 @@ description: >
   "what is X", "show me X", "analyze X", "understand X".
   This skill loads prior knowledge from a persistent store — invoke it even
   for repeat questions to benefit from cached call graph data.
-version: 0.1.1
+version: 0.1.2
 tools: Read, Glob, Grep, Write, AskUserQuestion
 ---
 
@@ -372,17 +372,40 @@ Merge algorithm (see `references/traversal-strategy.md` § Merge Algorithm):
 
 Build: `merged = { runs[], nodes[], edges[], concerns[], di_map[], timeline_stats }`
 
-### Step 4 — Generate HTML report
+**Strip heavy fields before writing** (reduces payload 60-70%):
+- Per node: delete `body_full`; truncate `body_preview` to 400 chars
+- Per callee: delete `raw_line`
+- Original per-run `.json` files are untouched — full data always available there
 
-1. Read `assets/report-template.html`
-2. Replace all `{{PLACEHOLDER}}` tokens (HTML-escape all strings)
-3. Inject: `const reportData = <JSON.stringify(merged)>;`
-4. Write to current dir: `csharp-explorer-diagram-YYYYMMDD-HHmmss.html`
-5. Auto-open:
-   - Windows: `cmd.exe /c start "" "<path>"`
-   - macOS: `open "<path>"`
-   - Linux: `xdg-open "<path>"`
-6. Print: `Diagram saved → <path>`
+### Step 4 — Write output files and start server
+
+Output dir = `~/.claude/csharp-explorer/<project_slug>/report/`
+(Windows: `%USERPROFILE%\.claude\csharp-explorer\<project_slug>\report\`)
+
+1. **Write stripped merged object** → `<output_dir>/data.json`
+
+2. **Copy report template** → `<output_dir>/index.html`
+   - Read `assets/report-template.html` and write it verbatim (no token replacement needed — template fetches data.json itself)
+
+3. **Start HTTP server** (idempotent):
+   - Check if port 7657 is in use:
+     - Windows: `netstat -ano | findstr :7657`
+     - macOS/Linux: `lsof -ti:7657`
+   - If already running: skip start (existing server serves updated data.json)
+   - If not running: start in background — `python -m http.server 7657 --directory <output_dir>`
+   - Fallback order if python not found: `python3`, then `npx --yes serve -l 7657 <output_dir>`
+
+4. **Auto-open browser**:
+   - Windows: `cmd.exe /c start "" "http://localhost:7657/"`
+   - macOS: `open "http://localhost:7657/"`
+   - Linux: `xdg-open "http://localhost:7657/"`
+
+5. **Print**:
+   ```
+   Diagram ready → http://localhost:7657/
+   Data file    → <output_dir>/data.json  (<N> nodes, <M> edges, <K> runs)
+   (Server stays running — re-run /csharp-explorer show to refresh data, then browser reload)
+   ```
 
 ---
 

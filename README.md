@@ -25,7 +25,7 @@ Debug any API endpoint by tracing the full request flow — from curl to respons
 - **Precise log parsing**: ANSI-stripping pre-processor → canonical clean log; anchored per-framework patterns replace naive `grep SELECT|INSERT` (eliminates false positives from stack traces and JSON request bodies); ripgrep multiline for multi-line query blocks
 - **Rich DB Queries dashboard**: interactive table with expandable rows, CSS-only SQL syntax highlight, filter (All / Slow / N+1), sort, search, copy-SQL button, timeline strip, N+1 shape-group color coding
 
-### `csharp-explorer` — v0.1.1
+### `csharp-explorer` — v0.1.2
 
 Analyze any C# class or method in depth — trace its **call graph**, understand its **DI wiring**, detect **async anti-patterns**, and build up knowledge **day by day** across multiple sessions. Results persist in a global store and can be visualized on demand as an interactive unified diagram.
 
@@ -384,7 +384,7 @@ AIAgentSkills/
 ├── skills/                            ← source-of-truth mirror of .claude/skills/
 │   ├── api-flow-debugger/
 │   ├── agent-debate-team/
-│   ├── csharp-explorer/               ← v0.1.1 — init command, auto-notify hook, stronger triggers
+│   ├── csharp-explorer/               ← v0.1.2 — fetch-based report server, edge fix, tiered rendering
 │   ├── testing-explorer/
 │   ├── testing-strategy/              ← v0.1.2 — testing strategy advisor (scope + overlap)
 │   ├── agent-forge-team/              ← includes references/ticket-ingestion.md (v0.2.0)
@@ -435,6 +435,13 @@ AIAgentSkills/
 ---
 
 ## Release Notes
+
+### 2026-05-27 — `csharp-explorer` v0.1.2 (update)
+- **fetch-based report server**: Phase S now writes `data.json` + slim `index.html` to `~/.claude/csharp-explorer/<project>/report/`, starts `python -m http.server 7657`, and opens `http://localhost:7657/` — no more embedded JSON in HTML (fixes Write tool timeout and browser crash on large stores)
+- **Fix call graph edges invisible**: edge stroke color changed from `#484f58` (invisible on dark bg) to `#8b949e`
+- **Remove Definition Preview section**: removed from HTML report (was redundant)
+- **Tiered rendering**: ≤50 nodes → full force-directed physics; 51–100 → static layout (30 iterations); >100 → table-only mode with banner
+- **Template no longer needs token replacement**: all data read from `data.json` via `fetch()` — Phase S copies template verbatim
 
 ### 2026-05-27 — `csharp-explorer` v0.1.1 — init command + auto-notify hook + stronger triggers
 

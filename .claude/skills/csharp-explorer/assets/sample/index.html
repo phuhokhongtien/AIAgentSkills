@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MyShop — C# Explorer</title>
+<title>C# Explorer Report</title>
 <style>
 :root {
   --bg: #0d1117;
@@ -71,11 +71,6 @@ a { color: var(--blue); text-decoration: none; }
 .section-toggle { color: var(--text-muted); font-size: 12px; }
 .section-body { padding: 16px; }
 .section-body.collapsed { display: none; }
-
-/* Code block */
-.code-block { background: #010409; border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; font-family: var(--font-mono); font-size: 13px; overflow-x: auto; white-space: pre; line-height: 1.6; position: relative; }
-.copy-btn { position: absolute; top: 8px; right: 8px; background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; color: var(--text-muted); font-size: 11px; padding: 4px 8px; cursor: pointer; }
-.copy-btn:hover { color: var(--text); border-color: var(--text-muted); }
 
 /* Table */
 .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -159,19 +154,27 @@ a { color: var(--blue); text-decoration: none; }
 </style>
 </head>
 <body>
+
+<!-- Loading overlay -->
+<div id="loading" style="display:none;position:fixed;inset:0;background:#0d1117;align-items:center;justify-content:center;z-index:999;color:#8b949e;font-size:1.1rem;flex-direction:column;gap:12px;">
+  <div style="width:32px;height:32px;border:3px solid #30363d;border-top-color:#58a6ff;border-radius:50%;animation:spin 0.8s linear infinite"></div>
+  <span>Loading report data...</span>
+</div>
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+
 <div class="page">
 
   <!-- Header -->
   <div class="header">
-    <h1>MyShop — C# Explorer</h1>
-    <div class="meta">Generated 2026-05-26 10:30 UTC</div>
+    <h1 id="report-title">C# Explorer Report</h1>
+    <div class="meta" id="report-meta"></div>
     <div class="badge-row" id="badge-row"></div>
   </div>
 
   <!-- Key insight -->
   <div class="insight-banner">
     <span class="insight-icon">&#9432;</span>
-    <span id="key-insight">Core business logic node: 4 callers and 3 external I/O dependencies</span>
+    <span id="key-insight"></span>
   </div>
 
   <!-- Summary cards -->
@@ -214,21 +217,6 @@ a { color: var(--blue); text-decoration: none; }
           <div class="nrow" id="np-runs-row" style="display:none"><span class="nlabel">Seen</span><span id="np-runs">—</span></div>
         </div>
       </div>
-    </div>
-  </div>
-
-  <!-- Definition preview -->
-  <div class="section">
-    <div class="section-header" onclick="toggleSection('def')">
-      <div class="section-title">&#10092;/&#10093; Definition Preview</div>
-      <span class="section-toggle" id="def-toggle">&#9660;</span>
-    </div>
-    <div class="section-body" id="def-body">
-      <div style="position:relative">
-        <button class="copy-btn" onclick="copyCode()">Copy</button>
-        <div class="code-block" id="def-code"></div>
-      </div>
-      <div id="def-truncated" style="color:var(--yellow);font-size:12px;margin-top:8px;display:none">&#9888; Body truncated at 500 lines. Full source in file.</div>
     </div>
   </div>
 
@@ -328,7 +316,25 @@ a { color: var(--blue); text-decoration: none; }
 <div class="tooltip" id="tooltip"></div>
 
 <script>
-const reportData = {"schema_version": "1.0", "timestamp": "2026-05-26T10:30:00Z", "project_name": "MyShop", "project_slug": "myshop", "target": {"name": "OrderService.CreateOrder", "class_name": "OrderService", "method_name": "CreateOrder", "kind": "method", "file": "src/Services/OrderService.cs", "definition_line": 47, "namespace": "MyShop.Services", "layer": "service", "boundary_type": "domain-core", "modifiers": ["public", "async"], "return_type": "Task<Order>", "parameters": [{"type": "CreateOrderDto", "name": "dto"}], "attributes": ["[Authorize]"], "di_dependencies": [{"interface_type": "IOrderRepository", "param_name": "_orderRepo", "lifetime": "scoped"}, {"interface_type": "IPaymentGateway", "param_name": "_payment", "lifetime": "transient"}, {"interface_type": "ILogger<OrderService>", "param_name": "_logger", "lifetime": "singleton"}], "cache_hit": false}, "intake": {"direction": "both", "depth": 2, "namespace_filter": null}, "definition": {"body_preview": "public async Task<Order> CreateOrder(CreateOrderDto dto)\n{\n    var order = new Order { CustomerId = dto.CustomerId, Status = OrderStatus.Pending };\n    await _orderRepo.SaveAsync(order);\n    var result = await _payment.ChargeAsync(dto.PaymentInfo, order.Total);\n    if (!result.Success)\n    {\n        order.Status = OrderStatus.PaymentFailed;\n        await _orderRepo.UpdateAsync(order);\n        throw new PaymentException(result.Error);\n    }\n    order.Status = OrderStatus.Confirmed;\n    await _orderRepo.UpdateAsync(order);\n    _logger.LogInformation(\"Order {Id} created\", order.Id);\n    return order;\n}", "body_full": null, "line_start": 47, "line_end": 72, "truncated": false}, "callees": [{"receiver": "_orderRepo", "receiver_type": "IOrderRepository", "method_name": "SaveAsync", "file": "src/Repositories/OrderRepository.cs", "definition_line": 23, "is_external_io": true, "io_category": "database", "is_async": true, "is_internal": true, "is_static": false, "raw_line": "    await _orderRepo.SaveAsync(order);"}, {"receiver": "_payment", "receiver_type": "IPaymentGateway", "method_name": "ChargeAsync", "file": null, "definition_line": null, "is_external_io": true, "io_category": "http", "is_async": true, "is_internal": false, "is_static": false, "raw_line": "    var result = await _payment.ChargeAsync(dto.PaymentInfo, order.Total);"}, {"receiver": "_orderRepo", "receiver_type": "IOrderRepository", "method_name": "UpdateAsync", "file": "src/Repositories/OrderRepository.cs", "definition_line": 35, "is_external_io": true, "io_category": "database", "is_async": true, "is_internal": true, "is_static": false, "raw_line": "    await _orderRepo.UpdateAsync(order);"}, {"receiver": "_logger", "receiver_type": "ILogger<OrderService>", "method_name": "LogInformation", "file": null, "definition_line": null, "is_external_io": false, "io_category": "logging", "is_async": false, "is_internal": false, "is_static": false, "raw_line": "    _logger.LogInformation(\"Order {Id} created\", order.Id);"}], "caller_tree": {"nodes": [{"id": "MyShop.Controllers::OrderController::Post", "class_name": "OrderController", "method_name": "Post", "namespace": "MyShop.Controllers", "file": "src/Controllers/OrderController.cs", "line_number": 34, "layer": "controller", "depth": 1, "call_expression": "await _orderService.CreateOrder(dto);"}, {"id": "MyShop.Controllers::OrderController::BulkCreate", "class_name": "OrderController", "method_name": "BulkCreate", "namespace": "MyShop.Controllers", "file": "src/Controllers/OrderController.cs", "line_number": 58, "layer": "controller", "depth": 1, "call_expression": "await _orderService.CreateOrder(item);"}, {"id": "MyShop.Jobs::OrderImportJob::ProcessRow", "class_name": "OrderImportJob", "method_name": "ProcessRow", "namespace": "MyShop.Jobs", "file": "src/Jobs/OrderImportJob.cs", "line_number": 89, "layer": "background-job", "depth": 1, "call_expression": "await _orderService.CreateOrder(mapped);"}, {"id": "MyShop.Controllers::AdminController::Import", "class_name": "AdminController", "method_name": "Import", "namespace": "MyShop.Controllers", "file": "src/Controllers/AdminController.cs", "line_number": 112, "layer": "controller", "depth": 2, "call_expression": "await _importJob.ProcessRow(row);"}], "edges": [{"from": "MyShop.Controllers::OrderController::Post", "to": "MyShop.Services::OrderService::CreateOrder"}, {"from": "MyShop.Controllers::OrderController::BulkCreate", "to": "MyShop.Services::OrderService::CreateOrder"}, {"from": "MyShop.Jobs::OrderImportJob::ProcessRow", "to": "MyShop.Services::OrderService::CreateOrder"}, {"from": "MyShop.Controllers::AdminController::Import", "to": "MyShop.Jobs::OrderImportJob::ProcessRow"}], "depth_reached": 2, "truncated": false, "total_caller_count": 4, "test_callers": [{"class_name": "OrderServiceTests", "method_name": "CreateOrder_ValidDto_Returns201", "file": "tests/Services/OrderServiceTests.cs", "line_number": 45}, {"class_name": "OrderServiceTests", "method_name": "CreateOrder_PaymentFails_Throws", "file": "tests/Services/OrderServiceTests.cs", "line_number": 72}], "test_caller_count": 2}, "synthesis": {"target_summary": "Creates a new order from a DTO, persists it via the repository, and charges payment. On failure, marks order as failed and throws PaymentException.", "layer": "service", "boundary_type": "domain-core", "key_insight": "Core business logic node: 4 callers (2 controllers + 1 job) and 3 external I/O dependencies", "async_issues": [], "di_issues": [], "interface_implementations": [{"class_name": "OrderService", "file": "src/Services/OrderService.cs", "line": 12}], "partial_parts": [], "concerns": []}, "stats": {"caller_count": 4, "test_caller_count": 2, "callee_count": 4, "external_io_count": 3, "async_callee_count": 3, "partial_class_parts": 0, "interface_implementations": 1, "cache_hit": false}};
+// ─── Data loading ─────────────────────────────────────────────────────────────
+let reportData = null;
+document.getElementById('loading').style.display = 'flex';
+fetch('./data.json')
+  .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+  .then(function(data) {
+    reportData = data;
+    document.getElementById('loading').style.display = 'none';
+    initReport();
+  })
+  .catch(function(err) {
+    var el = document.getElementById('loading');
+    el.style.display = 'flex';
+    el.innerHTML = '<div style="color:#f85149;padding:32px;text-align:center;font-family:monospace;max-width:480px">'
+      + '<div style="font-size:1.2rem;margin-bottom:12px">&#9888; Failed to load data.json</div>'
+      + '<div style="color:#8b949e;font-size:13px;margin-bottom:16px">' + String(err.message) + '</div>'
+      + '<div style="color:#6e7681;font-size:12px">Make sure the HTTP server is running:<br>'
+      + '<code style="color:#58a6ff">python -m http.server 7657</code></div></div>';
+  });
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function esc(s) {
@@ -336,328 +342,404 @@ function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 function toggleSection(id) {
-  const body = document.getElementById(id + '-body');
-  const tog = document.getElementById(id + '-toggle');
-  const collapsed = body.classList.toggle('collapsed');
+  var body = document.getElementById(id + '-body');
+  var tog = document.getElementById(id + '-toggle');
+  var collapsed = body.classList.toggle('collapsed');
   tog.innerHTML = collapsed ? '&#9650;' : '&#9660;';
 }
 function layerColor(layer) {
-  const m = { controller:'--blue', service:'--green', repository:'--yellow', domain:'--purple', handler:'--orange', middleware:'--pink', utility:'--text-muted', 'cqrs-handler':'--orange', factory:'--text-muted', validator:'--text-muted', 'background-job':'--orange' };
+  var m = { controller:'--blue', service:'--green', repository:'--yellow', domain:'--purple', handler:'--orange', middleware:'--pink', utility:'--text-muted', 'cqrs-handler':'--orange', factory:'--text-muted', validator:'--text-muted', 'background-job':'--orange' };
   return m[layer] || '--text-muted';
 }
 function layerBadgeClass(layer) {
-  const m = { controller:'badge-controller', service:'badge-service', repository:'badge-repository', domain:'badge-domain', handler:'badge-handler' };
+  var m = { controller:'badge-controller', service:'badge-service', repository:'badge-repository', domain:'badge-domain', handler:'badge-handler' };
   return m[layer] || 'badge-utility';
 }
 function ioTagClass(cat) {
-  const m = { database:'tag-db', http:'tag-http', messaging:'tag-msg', cache:'tag-cache', storage:'tag-storage', email:'tag-email', logging:'tag-logging' };
+  var m = { database:'tag-db', http:'tag-http', messaging:'tag-msg', cache:'tag-cache', storage:'tag-storage', email:'tag-email', logging:'tag-logging' };
   return m[cat] || 'tag-db';
 }
-function copyCode() {
-  const code = document.getElementById('def-code').innerText;
-  navigator.clipboard.writeText(code).catch(() => {});
+
+// ─── Module-level state (set by initReport, used by event handlers) ───────────
+var _callerTreeNodes = [], _testCallers = [], _callees = [], _graphNodes = [];
+
+// ─── Main init (called after data.json loads) ─────────────────────────────────
+function initReport() {
+  // Mode detection
+  var isMerged = !!reportData.schema_version && reportData.schema_version.includes('merged');
+  var target = isMerged ? null : reportData.target;
+  var nodes = isMerged ? (reportData.nodes || []) : (reportData.caller_tree ? reportData.caller_tree.nodes || [] : []);
+  var edges = isMerged ? (reportData.edges || []) : (reportData.caller_tree ? reportData.caller_tree.edges || [] : []);
+  var callees = isMerged ? [] : (reportData.callees || []);
+  var concerns = isMerged ? (reportData.concerns || []) : (reportData.synthesis ? reportData.synthesis.concerns || [] : []);
+  var callerTreeNodes = isMerged ? [] : (reportData.caller_tree ? reportData.caller_tree.nodes || [] : []);
+  var testCallers = isMerged ? [] : (reportData.caller_tree ? reportData.caller_tree.test_callers || [] : []);
+
+  // Store for event handlers
+  _callerTreeNodes = callerTreeNodes;
+  _testCallers = testCallers;
+  _callees = callees;
+
+  // ─── Set title / header / insight from JSON ───────────────────────────────
+  var projectName = reportData.project_name || 'C# Explorer';
+  document.title = projectName + ' — C# Explorer';
+  document.getElementById('report-title').textContent = projectName + ' — C# Explorer';
+  var ts = (reportData.timestamp || '').replace('T', ' ').slice(0, 16);
+  document.getElementById('report-meta').textContent = ts ? 'Generated ' + ts + ' UTC' : '';
+  var insight = (reportData.synthesis && reportData.synthesis.key_insight) || (reportData.key_insight) || '';
+  document.getElementById('key-insight').textContent = insight;
+
+  // ─── Header badges ────────────────────────────────────────────────────────
+  (function() {
+    var row = document.getElementById('badge-row');
+    if (!target && !isMerged) return;
+    var items = [];
+    if (target) {
+      items.push('<span class="badge badge-kind-' + esc(target.kind) + '">' + esc(target.kind) + '</span>');
+      items.push('<span class="badge ' + layerBadgeClass(target.layer) + '">' + esc(target.layer) + '</span>');
+      if (target.boundary_type) items.push('<span class="badge badge-utility">' + esc(target.boundary_type) + '</span>');
+      if (target.cache_hit) items.push('<span class="badge badge-utility">cache hit</span>');
+    }
+    if (isMerged) items.push('<span class="badge badge-utility">merged &middot; ' + (reportData.runs_count || (reportData.runs && reportData.runs.length) || 0) + ' runs</span>');
+    row.innerHTML = items.join('');
+  })();
+
+  // ─── Summary cards ────────────────────────────────────────────────────────
+  (function() {
+    var cont = document.getElementById('cards-container');
+    var cards = [];
+    if (!isMerged && target) {
+      var callerCount = reportData.stats ? reportData.stats.caller_count : 0;
+      var calleeCount = reportData.stats ? reportData.stats.callee_count : 0;
+      var ioCount = reportData.stats ? reportData.stats.external_io_count : 0;
+      var concernCount = concerns.length;
+      cards.push({ label: 'Layer', value: target.layer || '—', cls: 'val-blue', sub: target.boundary_type || '' });
+      cards.push({ label: 'Callers', value: callerCount, cls: callerCount === 0 ? 'val-green' : callerCount <= 7 ? 'val-yellow' : 'val-red', sub: ((reportData.stats || {}).test_caller_count || 0) + ' in tests' });
+      cards.push({ label: 'Callees', value: calleeCount, cls: 'val-muted', sub: '' });
+      cards.push({ label: 'External I/O', value: ioCount, cls: ioCount === 0 ? 'val-green' : ioCount <= 2 ? 'val-yellow' : 'val-red', sub: '' });
+      cards.push({ label: 'Concerns', value: concernCount, cls: concernCount === 0 ? 'val-green' : 'val-red', sub: '' });
+      if (reportData.stats && reportData.stats.async_callee_count) cards.push({ label: 'Async calls', value: reportData.stats.async_callee_count, cls: 'val-muted', sub: '' });
+    } else if (isMerged && reportData.timeline_stats) {
+      var ts2 = reportData.timeline_stats;
+      cards.push({ label: 'Runs merged', value: ts2.run_count, cls: 'val-blue', sub: '' });
+      cards.push({ label: 'Unique nodes', value: ts2.total_unique_nodes, cls: 'val-muted', sub: '' });
+      cards.push({ label: 'Unique edges', value: ts2.total_unique_edges, cls: 'val-muted', sub: '' });
+      cards.push({ label: 'Concerns', value: ts2.total_concerns, cls: ts2.total_concerns === 0 ? 'val-green' : 'val-red', sub: '' });
+      cards.push({ label: 'Stale nodes', value: ts2.stale_nodes || 0, cls: (ts2.stale_nodes || 0) === 0 ? 'val-green' : 'val-yellow', sub: '' });
+    }
+    cont.innerHTML = cards.map(function(c) {
+      return '<div class="card"><div class="card-label">' + esc(c.label) + '</div><div class="card-value ' + c.cls + '">' + esc(String(c.value)) + '</div><div class="card-sub">' + esc(c.sub) + '</div></div>';
+    }).join('');
+  })();
+
+  // ─── Timeline (merged mode) ────────────────────────────────────────────────
+  (function() {
+    if (!isMerged || !reportData.runs || reportData.runs.length < 2) return;
+    document.getElementById('timeline-section').style.display = '';
+    var cont = document.getElementById('timeline-container');
+    var runs = reportData.runs;
+    var items = [];
+    runs.forEach(function(run, i) {
+      if (i > 0) items.push('<div class="timeline-line"></div>');
+      var date = run.timestamp ? run.timestamp.slice(0,10) : '?';
+      items.push('<div class="timeline-dot-wrap"><div class="timeline-dot" title="' + esc(run.target_name) + ' — ' + esc(date) + '" onclick="filterByRun(' + i + ')"></div><div class="timeline-label">' + esc(run.target_name || date) + '</div></div>');
+    });
+    cont.innerHTML = items.join('');
+  })();
+
+  // ─── Call graph (force-directed SVG) ─────────────────────────────────────
+  (function() {
+    if (reportData.caller_tree && reportData.caller_tree.truncated) {
+      document.getElementById('graph-truncated-banner').style.display = '';
+    }
+    var svg = document.getElementById('graph-svg');
+    var W = document.getElementById('graph-container').offsetWidth || 900;
+    var H = 520;
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+
+    var allNodes = [];
+    var nodeIndex = {};
+
+    function addNode(n, isTarget) {
+      var id = n.id || (n.namespace + '::' + n.class_name + '::' + (n.method_name || ''));
+      if (nodeIndex[id] != null) return nodeIndex[id];
+      var idx = allNodes.length;
+      nodeIndex[id] = idx;
+      var node = { id: id, isTarget: !!isTarget, x: W/2 + (Math.random()-0.5)*200, y: H/2 + (Math.random()-0.5)*200, vx: 0, vy: 0 };
+      // copy properties
+      for (var k in n) { if (Object.prototype.hasOwnProperty.call(n, k)) node[k] = n[k]; }
+      node.id = id; node.isTarget = !!isTarget;
+      allNodes.push(node);
+      return idx;
+    }
+
+    if (target) {
+      addNode({ id: target.namespace + '::' + (target.class_name || target.name) + '::' + (target.method_name || ''), class_name: target.class_name || target.name, method_name: target.method_name || '', namespace: target.namespace, layer: target.layer, file: target.file }, true);
+    }
+    nodes.forEach(function(n) { addNode(n, false); });
+    if (isMerged && reportData.nodes) reportData.nodes.forEach(function(n) { addNode(n, false); });
+
+    var allEdges = [];
+    edges.forEach(function(e) {
+      var fi = nodeIndex[e.from], ti = nodeIndex[e.to];
+      if (fi != null && ti != null) allEdges.push({ fi: fi, ti: ti, count: e.observation_count || 1 });
+    });
+
+    // Store for node panel
+    _graphNodes = allNodes;
+
+    // ── Tiered rendering decision ──────────────────────────────────────────
+    var nodeCount = allNodes.length;
+    if (nodeCount === 0) {
+      svg.innerHTML = '<text x="50%" y="50%" text-anchor="middle" fill="#6e7681" font-size="13" font-family="sans-serif">No graph data available</text>';
+      return;
+    }
+    if (nodeCount > 100) {
+      // Table-only mode
+      svg.style.display = 'none';
+      var banner = document.getElementById('graph-truncated-banner');
+      banner.textContent = '⚠ Graph has ' + nodeCount + ' nodes — showing table view for performance. Use filters to narrow scope.';
+      banner.style.display = '';
+      renderNodesTable(allNodes, allEdges);
+      return;
+    }
+
+    // Force simulation (30 iterations for 51-100 nodes, 120 for ≤50)
+    var ITER = nodeCount > 50 ? 30 : 120;
+    var K = 80, repel = 4000, centerF = 0.03, damping = 0.7;
+    for (var iter = 0; iter < ITER; iter++) {
+      for (var i = 0; i < allNodes.length; i++) {
+        for (var j = i+1; j < allNodes.length; j++) {
+          var dx = allNodes[i].x - allNodes[j].x, dy = allNodes[i].y - allNodes[j].y;
+          var d = Math.sqrt(dx*dx+dy*dy) || 0.1;
+          var f = repel / (d*d);
+          allNodes[i].vx += f*dx/d; allNodes[i].vy += f*dy/d;
+          allNodes[j].vx -= f*dx/d; allNodes[j].vy -= f*dy/d;
+        }
+      }
+      allEdges.forEach(function(e) {
+        var a = allNodes[e.fi], b = allNodes[e.ti];
+        var dx = a.x-b.x, dy = a.y-b.y, d = Math.sqrt(dx*dx+dy*dy)||0.1;
+        var f = (d-K)/d * 0.5;
+        a.vx -= f*dx; a.vy -= f*dy; b.vx += f*dx; b.vy += f*dy;
+      });
+      allNodes.forEach(function(n) {
+        n.vx += (W/2-n.x)*centerF; n.vy += (H/2-n.y)*centerF;
+      });
+      allNodes.forEach(function(n) {
+        n.x += n.vx*damping; n.y += n.vy*damping;
+        n.vx *= damping; n.vy *= damping;
+        n.x = Math.max(30, Math.min(W-30, n.x));
+        n.y = Math.max(30, Math.min(H-30, n.y));
+      });
+    }
+
+    // Render SVG
+    var svgHTML = '<defs><marker id="arr" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="#8b949e"/></marker></defs>';
+
+    // Edges first (behind nodes)
+    allEdges.forEach(function(e) {
+      var a = allNodes[e.fi], b = allNodes[e.ti];
+      var dx = b.x-a.x, dy = b.y-a.y, d = Math.sqrt(dx*dx+dy*dy)||1;
+      var ex = b.x-dx/d*16, ey = b.y-dy/d*16;
+      var thickness = Math.min(1+e.count*0.5, 4);
+      var cx = (a.x+b.x)/2 + (dy/d)*30, cy = (a.y+b.y)/2 - (dx/d)*30;
+      svgHTML += '<path d="M' + a.x + ',' + a.y + ' Q' + cx + ',' + cy + ' ' + ex + ',' + ey + '" stroke="#8b949e" stroke-width="' + thickness + '" fill="none" marker-end="url(#arr)" opacity="0.5"/>';
+    });
+
+    // Nodes
+    var layerVarMap = { controller:'58a6ff', service:'3fb950', repository:'d29922', domain:'bc8cff', handler:'ffa657', middleware:'f778ba' };
+    allNodes.forEach(function(n, i) {
+      var col = '#' + (layerVarMap[n.layer] || '6e7681');
+      var r = n.isTarget ? 16 : 10;
+      var strokeW = n.isTarget ? 3 : 1.5;
+      var strokeC = n.isTarget ? '#ffffff' : col;
+      var glow = n.run_count > 1 ? '<circle cx="' + n.x + '" cy="' + n.y + '" r="' + (r+5) + '" fill="none" stroke="' + col + '" stroke-width="1" opacity="0.3"/>' : '';
+      var staleRing = n.stale ? '<circle cx="' + n.x + '" cy="' + n.y + '" r="' + (r+3) + '" fill="none" stroke="#f85149" stroke-width="1" stroke-dasharray="3,2" opacity="0.6"/>' : '';
+      var label = n.method_name || n.class_name || n.name || '';
+      var shortLabel = label.length > 14 ? label.slice(0,13)+'…' : label;
+      svgHTML += glow + staleRing + '<g class="gnode" data-idx="' + i + '" style="cursor:pointer" onclick="showNodePanel(' + i + ')">'
+        + '<circle cx="' + n.x + '" cy="' + n.y + '" r="' + r + '" fill="' + col + '" fill-opacity="0.2" stroke="' + strokeC + '" stroke-width="' + strokeW + '"/>'
+        + '<text x="' + n.x + '" y="' + (n.y+r+12) + '" text-anchor="middle" font-size="10" fill="#8b949e" font-family="sans-serif">' + esc(shortLabel) + '</text></g>';
+    });
+
+    svg.innerHTML = svgHTML;
+
+    // Pan / zoom
+    var panX=0, panY=0, scale=1, dragging=false, startX, startY;
+    var cont = document.getElementById('graph-container');
+    cont.addEventListener('wheel', function(e) { e.preventDefault(); scale = Math.max(0.3, Math.min(3, scale * (1 - e.deltaY*0.001))); svg.style.transform = 'translate(' + panX + 'px,' + panY + 'px) scale(' + scale + ')'; });
+    cont.addEventListener('mousedown', function(e) { if (e.target.closest('.gnode')) return; dragging=true; startX=e.clientX-panX; startY=e.clientY-panY; });
+    window.addEventListener('mousemove', function(e) { if (!dragging) return; panX=e.clientX-startX; panY=e.clientY-startY; svg.style.transform='translate('+panX+'px,'+panY+'px) scale('+scale+')'; });
+    window.addEventListener('mouseup', function() { dragging=false; });
+  })();
+
+  // ─── DI table ─────────────────────────────────────────────────────────────
+  (function() {
+    var deps = target ? (target.di_dependencies || []) : (isMerged ? (reportData.di_map || []) : []);
+    if (!deps.length) return;
+    document.getElementById('di-section').style.display = '';
+    var tbody = document.getElementById('di-tbody');
+    var diIssues = reportData.synthesis ? (reportData.synthesis.di_issues || []) : [];
+    tbody.innerHTML = deps.map(function(d) {
+      var itype = d.interface_type || d.interface || '—';
+      var impl = d.implementation || d.param_name || '—';
+      var lifetime = d.lifetime || '?';
+      var isMismatch = diIssues.some(function(i) { return i.issue_type === 'lifetime_mismatch' && i.description && i.description.includes(itype); });
+      var ltClass = isMismatch ? 'lifetime-mismatch' : ('lifetime-' + lifetime);
+      var reg = d.registration_file ? esc(d.registration_file) + ':' + (d.registration_line || '?') : '—';
+      return '<tr><td>' + esc(itype) + '</td><td class="' + ltClass + '">' + esc(lifetime) + '</td><td>' + reg + '</td></tr>';
+    }).join('');
+  })();
+
+  // ─── Callers / callees initial render ─────────────────────────────────────
+  renderCallersTable();
+  renderCalleesTable();
+
+  // ─── Concerns ─────────────────────────────────────────────────────────────
+  (function() {
+    if (!concerns.length) return;
+    document.getElementById('concerns-section').style.display = '';
+    document.getElementById('concerns-count-badge').textContent = '(' + concerns.length + ')';
+    var list = document.getElementById('concerns-list');
+    list.innerHTML = concerns.map(function(c) {
+      var sev = c.severity || 'warning';
+      return '<div class="concern-item ' + sev + '">'
+        + '<div class="concern-title">' + esc(c.issue_type || c.type || 'Issue') + '</div>'
+        + '<div class="concern-desc">' + esc(c.description || '') + '</div>'
+        + (c.offending_line ? '<div class="concern-code">' + esc(c.offending_line) + '</div>' : '')
+        + (c.recommendation ? '<div class="concern-rec">&#8594; ' + esc(c.recommendation) + '</div>' : '')
+        + '</div>';
+    }).join('');
+  })();
+
+  // ─── Interface / partial ───────────────────────────────────────────────────
+  (function() {
+    if (!reportData.synthesis) return;
+    var impls = reportData.synthesis.interface_implementations || [];
+    var parts = reportData.synthesis.partial_parts || [];
+    if (!impls.length && !parts.length) return;
+    document.getElementById('iface-section').style.display = '';
+    var html = '';
+    if (impls.length) {
+      html += '<p style="font-size:13px;color:var(--text-muted);margin-bottom:8px">Implementations:</p>';
+      html += '<table class="data-table"><thead><tr><th>Class</th><th>File</th><th>Line</th></tr></thead><tbody>';
+      html += impls.map(function(i) { return '<tr><td>' + esc(i.class_name) + '</td><td>' + esc(i.file) + '</td><td>' + (i.line || '?') + '</td></tr>'; }).join('');
+      html += '</tbody></table>';
+    }
+    if (parts.length) {
+      html += '<p style="font-size:13px;color:var(--text-muted);margin:12px 0 8px">Partial class parts:</p>';
+      html += '<table class="data-table"><thead><tr><th>File</th></tr></thead><tbody>';
+      html += parts.map(function(p) { return '<tr><td>' + esc(p.file || p) + '</td></tr>'; }).join('');
+      html += '</tbody></table>';
+    }
+    document.getElementById('iface-content').innerHTML = html;
+  })();
 }
 
-// ─── Determine mode (single run vs merged) ────────────────────────────────────
-const isMerged = !!reportData.schema_version && reportData.schema_version.includes('merged');
-const target = isMerged ? null : reportData.target;
-const nodes = isMerged ? reportData.nodes : (reportData.caller_tree ? reportData.caller_tree.nodes : []);
-const edges = isMerged ? reportData.edges : (reportData.caller_tree ? reportData.caller_tree.edges : []);
-const callees = isMerged ? [] : (reportData.callees || []);
-const concerns = isMerged ? (reportData.concerns || []) : (reportData.synthesis ? reportData.synthesis.concerns || [] : []);
-const callerTreeNodes = isMerged ? [] : (reportData.caller_tree ? reportData.caller_tree.nodes : []);
-const testCallers = isMerged ? [] : (reportData.caller_tree ? reportData.caller_tree.test_callers || [] : []);
-
-// ─── Header badges ────────────────────────────────────────────────────────────
-(function() {
-  const row = document.getElementById('badge-row');
-  if (!target && !isMerged) return;
-  const items = [];
-  if (target) {
-    items.push(`<span class="badge badge-kind-${esc(target.kind)}">${esc(target.kind)}</span>`);
-    items.push(`<span class="badge ${layerBadgeClass(target.layer)}">${esc(target.layer)}</span>`);
-    if (target.boundary_type) items.push(`<span class="badge badge-utility">${esc(target.boundary_type)}</span>`);
-    if (target.cache_hit) items.push(`<span class="badge badge-utility">cache hit</span>`);
-  }
-  if (isMerged) items.push(`<span class="badge badge-utility">merged · ${reportData.runs} runs</span>`);
-  row.innerHTML = items.join('');
-})();
-
-// ─── Summary cards ────────────────────────────────────────────────────────────
-(function() {
-  const cont = document.getElementById('cards-container');
-  const cards = [];
-  if (!isMerged && target) {
-    const callerCount = reportData.stats ? reportData.stats.caller_count : 0;
-    const calleeCount = reportData.stats ? reportData.stats.callee_count : 0;
-    const ioCount = reportData.stats ? reportData.stats.external_io_count : 0;
-    const concernCount = concerns.length;
-    cards.push({ label: 'Layer', value: target.layer || '—', cls: 'val-blue', sub: target.boundary_type || '' });
-    cards.push({ label: 'Callers', value: callerCount, cls: callerCount === 0 ? 'val-green' : callerCount <= 7 ? 'val-yellow' : 'val-red', sub: `${(reportData.stats||{}).test_caller_count||0} in tests` });
-    cards.push({ label: 'Callees', value: calleeCount, cls: 'val-muted', sub: '' });
-    cards.push({ label: 'External I/O', value: ioCount, cls: ioCount === 0 ? 'val-green' : ioCount <= 2 ? 'val-yellow' : 'val-red', sub: '' });
-    cards.push({ label: 'Concerns', value: concernCount, cls: concernCount === 0 ? 'val-green' : 'val-red', sub: '' });
-    if (reportData.stats && reportData.stats.async_callee_count) cards.push({ label: 'Async calls', value: reportData.stats.async_callee_count, cls: 'val-muted', sub: '' });
-  } else if (isMerged && reportData.timeline_stats) {
-    const ts = reportData.timeline_stats;
-    cards.push({ label: 'Runs merged', value: ts.run_count, cls: 'val-blue', sub: '' });
-    cards.push({ label: 'Unique nodes', value: ts.total_unique_nodes, cls: 'val-muted', sub: '' });
-    cards.push({ label: 'Unique edges', value: ts.total_unique_edges, cls: 'val-muted', sub: '' });
-    cards.push({ label: 'Concerns', value: ts.total_concerns, cls: ts.total_concerns === 0 ? 'val-green' : 'val-red', sub: '' });
-    cards.push({ label: 'Stale nodes', value: ts.stale_nodes || 0, cls: (ts.stale_nodes || 0) === 0 ? 'val-green' : 'val-yellow', sub: '' });
-  }
-  cont.innerHTML = cards.map(c => `<div class="card"><div class="card-label">${esc(c.label)}</div><div class="card-value ${c.cls}">${esc(String(c.value))}</div><div class="card-sub">${esc(c.sub)}</div></div>`).join('');
-})();
-
-// ─── Timeline (merged mode) ────────────────────────────────────────────────────
-(function() {
-  if (!isMerged || !reportData.runs || reportData.runs.length < 2) return;
-  document.getElementById('timeline-section').style.display = '';
-  const cont = document.getElementById('timeline-container');
-  const runs = reportData.runs;
-  const items = [];
-  runs.forEach((run, i) => {
-    if (i > 0) items.push('<div class="timeline-line"></div>');
-    const date = run.timestamp ? run.timestamp.slice(0,10) : '?';
-    items.push(`<div class="timeline-dot-wrap"><div class="timeline-dot" title="${esc(run.target_name)} — ${esc(date)}" onclick="filterByRun(${i})"></div><div class="timeline-label">${esc(run.target_name||date)}</div></div>`);
-  });
-  cont.innerHTML = items.join('');
-})();
-
-// ─── Call graph (force-directed SVG) ─────────────────────────────────────────
-(function() {
-  if (reportData.caller_tree && reportData.caller_tree.truncated) {
-    document.getElementById('graph-truncated-banner').style.display = '';
-  }
-  const svg = document.getElementById('graph-svg');
-  const W = document.getElementById('graph-container').offsetWidth || 900;
-  const H = 520;
-  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-
-  // Build all display nodes
-  const allNodes = [];
-  const nodeIndex = {};
-
-  function addNode(n, isTarget) {
-    const id = n.id || (n.namespace + '::' + n.class_name + '::' + (n.method_name||''));
-    if (nodeIndex[id] != null) return nodeIndex[id];
-    const idx = allNodes.length;
-    nodeIndex[id] = idx;
-    allNodes.push({ ...n, id, isTarget: !!isTarget, x: W/2 + (Math.random()-0.5)*200, y: H/2 + (Math.random()-0.5)*200, vx:0, vy:0 });
-    return idx;
-  }
-
-  if (target) addNode({ id: target.namespace+'::'+target.class_name+'::'+(target.method_name||''), ...target }, true);
-  (nodes.length ? nodes : []).forEach(n => addNode(n, false));
-  if (isMerged) reportData.nodes.forEach(n => addNode(n, false));
-
-  const allEdges = [];
-  (edges.length ? edges : []).forEach(e => {
-    const fi = nodeIndex[e.from], ti = nodeIndex[e.to];
-    if (fi != null && ti != null) allEdges.push({ fi, ti, count: e.observation_count || 1 });
-  });
-
-  // Simple force simulation
-  const ITER = 120;
-  const K = 80, repel = 4000, centerF = 0.03, damping = 0.7;
-  for (let iter = 0; iter < ITER; iter++) {
-    // Repulsion
-    for (let i = 0; i < allNodes.length; i++) for (let j = i+1; j < allNodes.length; j++) {
-      const dx = allNodes[i].x - allNodes[j].x, dy = allNodes[i].y - allNodes[j].y;
-      const d = Math.sqrt(dx*dx+dy*dy) || 0.1;
-      const f = repel / (d*d);
-      allNodes[i].vx += f*dx/d; allNodes[i].vy += f*dy/d;
-      allNodes[j].vx -= f*dx/d; allNodes[j].vy -= f*dy/d;
-    }
-    // Spring (edges)
-    allEdges.forEach(({ fi, ti }) => {
-      const a = allNodes[fi], b = allNodes[ti];
-      const dx = a.x-b.x, dy = a.y-b.y, d = Math.sqrt(dx*dx+dy*dy)||0.1;
-      const f = (d-K)/d * 0.5;
-      a.vx -= f*dx; a.vy -= f*dy; b.vx += f*dx; b.vy += f*dy;
-    });
-    // Center
-    allNodes.forEach(n => { n.vx += (W/2-n.x)*centerF; n.vy += (H/2-n.y)*centerF; });
-    // Integrate + damp
-    allNodes.forEach(n => { n.x += n.vx*damping; n.y += n.vy*damping; n.vx *= damping; n.vy *= damping; n.x = Math.max(30,Math.min(W-30,n.x)); n.y = Math.max(30,Math.min(H-30,n.y)); });
-  }
-
-  // Render
-  let svgHTML = '<defs><marker id="arr" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="#484f58"/></marker></defs>';
-
-  // Edges
-  allEdges.forEach(({ fi, ti, count }) => {
-    const a = allNodes[fi], b = allNodes[ti];
-    const dx = b.x-a.x, dy = b.y-a.y, d = Math.sqrt(dx*dx+dy*dy)||1;
-    const ex = b.x-dx/d*16, ey = b.y-dy/d*16;
-    const thickness = Math.min(1+count*0.5, 4);
-    const cx = (a.x+b.x)/2 + (dy/d)*30, cy = (a.y+b.y)/2 - (dx/d)*30;
-    svgHTML += `<path d="M${a.x},${a.y} Q${cx},${cy} ${ex},${ey}" stroke="#484f58" stroke-width="${thickness}" fill="none" marker-end="url(#arr)" opacity="0.7"/>`;
-  });
-
-  // Nodes
-  const layerVarMap = { controller:'58a6ff', service:'3fb950', repository:'d29922', domain:'bc8cff', handler:'ffa657', middleware:'f778ba' };
-  allNodes.forEach((n, i) => {
-    const col = '#' + (layerVarMap[n.layer] || '6e7681');
-    const r = n.isTarget ? 16 : 10;
-    const strokeW = n.isTarget ? 3 : (n.stale ? 1 : 1.5);
-    const strokeC = n.isTarget ? '#ffffff' : col;
-    const glow = n.run_count > 1 ? `<circle cx="${n.x}" cy="${n.y}" r="${r+5}" fill="none" stroke="${col}" stroke-width="1" opacity="0.3"/>` : '';
-    const staleRing = n.stale ? `<circle cx="${n.x}" cy="${n.y}" r="${r+3}" fill="none" stroke="#f85149" stroke-width="1" stroke-dasharray="3,2" opacity="0.6"/>` : '';
-    const label = n.method_name || n.class_name || n.name || '';
-    const shortLabel = label.length > 14 ? label.slice(0,13)+'…' : label;
-    svgHTML += `${glow}${staleRing}<g class="gnode" data-idx="${i}" style="cursor:pointer" onclick="showNodePanel(${i})">` +
-      `<circle cx="${n.x}" cy="${n.y}" r="${r}" fill="${col}" fill-opacity="0.2" stroke="${strokeC}" stroke-width="${strokeW}"/>` +
-      `<text x="${n.x}" y="${n.y+r+12}" text-anchor="middle" font-size="10" fill="#8b949e" font-family="sans-serif">${esc(shortLabel)}</text></g>`;
-  });
-
-  svg.innerHTML = svgHTML;
-
-  // Pan / zoom
-  let panX=0, panY=0, scale=1, dragging=false, startX, startY;
-  const cont = document.getElementById('graph-container');
-  cont.addEventListener('wheel', e => { e.preventDefault(); scale = Math.max(0.3, Math.min(3, scale * (1 - e.deltaY*0.001))); svg.style.transform = `translate(${panX}px,${panY}px) scale(${scale})`; });
-  cont.addEventListener('mousedown', e => { if (e.target.closest('.gnode')) return; dragging=true; startX=e.clientX-panX; startY=e.clientY-panY; });
-  window.addEventListener('mousemove', e => { if (!dragging) return; panX=e.clientX-startX; panY=e.clientY-startY; svg.style.transform=`translate(${panX}px,${panY}px) scale(${scale})`; });
-  window.addEventListener('mouseup', () => dragging=false);
-
-  window._graphNodes = allNodes;
-})();
-
+// ─── Node panel (called from SVG onclick) ─────────────────────────────────────
 function showNodePanel(idx) {
-  const n = window._graphNodes[idx];
+  var n = _graphNodes[idx];
   if (!n) return;
   document.getElementById('np-name').textContent = n.method_name || n.class_name || n.name || '—';
   document.getElementById('np-class').textContent = n.class_name || '—';
   document.getElementById('np-layer').textContent = n.layer || '—';
   document.getElementById('np-file').textContent = n.file || '—';
   document.getElementById('np-line').textContent = n.line_number || n.definition_line || '—';
-  if (n.run_count > 1) { document.getElementById('np-runs').textContent = n.run_count + ' runs · first: ' + (n.first_seen||'').slice(0,10); document.getElementById('np-runs-row').style.display=''; }
-  else document.getElementById('np-runs-row').style.display='none';
+  if (n.run_count > 1) {
+    document.getElementById('np-runs').textContent = n.run_count + ' runs · first: ' + (n.first_seen || '').slice(0,10);
+    document.getElementById('np-runs-row').style.display = '';
+  } else {
+    document.getElementById('np-runs-row').style.display = 'none';
+  }
   document.getElementById('node-panel').style.display = '';
 }
-function resetZoom() { const s = document.getElementById('graph-svg'); s.style.transform=''; }
+
+function resetZoom() {
+  var s = document.getElementById('graph-svg');
+  s.style.transform = '';
+}
+
 function filterLayer(l) {
-  document.querySelectorAll('.graph-controls button').forEach(b => b.classList.remove('active'));
-  document.getElementById('btn-' + l).classList.add('active');
-  document.querySelectorAll('.gnode').forEach(g => {
-    const idx = parseInt(g.dataset.idx);
-    const n = window._graphNodes[idx];
-    g.style.opacity = (l === 'all' || n.layer === l) ? '1' : '0.15';
+  document.querySelectorAll('.graph-controls button').forEach(function(b) { b.classList.remove('active'); });
+  var btn = document.getElementById('btn-' + l);
+  if (btn) btn.classList.add('active');
+  document.querySelectorAll('.gnode').forEach(function(g) {
+    var idx = parseInt(g.dataset.idx);
+    var n = _graphNodes[idx];
+    g.style.opacity = (l === 'all' || (n && n.layer === l)) ? '1' : '0.15';
   });
 }
+
 function filterByRun(i) {
-  document.querySelectorAll('.timeline-dot').forEach((d,j) => d.classList.toggle('active', j===i));
+  document.querySelectorAll('.timeline-dot').forEach(function(d, j) { d.classList.toggle('active', j === i); });
 }
 
-// ─── Definition preview ────────────────────────────────────────────────────────
-(function() {
-  if (!reportData.definition) return;
-  const code = reportData.definition.body_full || reportData.definition.body_preview || '';
-  document.getElementById('def-code').textContent = code;
-  if (reportData.definition.truncated) document.getElementById('def-truncated').style.display = '';
-})();
-
-// ─── DI table ─────────────────────────────────────────────────────────────────
-(function() {
-  const deps = target ? (target.di_dependencies || []) : (isMerged ? (reportData.di_map || []) : []);
-  if (!deps.length) return;
-  document.getElementById('di-section').style.display = '';
-  const tbody = document.getElementById('di-tbody');
-  const diIssues = reportData.synthesis ? (reportData.synthesis.di_issues || []) : [];
-  tbody.innerHTML = deps.map(d => {
-    const itype = d.interface_type || d.interface || '—';
-    const impl = d.implementation || d.param_name || '—';
-    const lifetime = d.lifetime || '?';
-    const isMismatch = diIssues.some(i => i.issue_type === 'lifetime_mismatch' && i.description && i.description.includes(itype));
-    const ltClass = isMismatch ? 'lifetime-mismatch' : ('lifetime-' + lifetime);
-    const reg = d.registration_file ? `${esc(d.registration_file)}:${d.registration_line||'?'}` : '—';
-    return `<tr><td>${esc(itype)}</td><td class="${ltClass}">${esc(lifetime)}</td><td>${reg}</td></tr>`;
-  }).join('');
-})();
-
-// ─── Callers table ─────────────────────────────────────────────────────────────
+// ─── Callers table (also called from filter onchange) ─────────────────────────
 function renderCallersTable() {
-  const hideTests = document.getElementById('filter-hide-tests').checked;
-  const layerF = document.getElementById('filter-layer').value;
-  const depthF = document.getElementById('filter-depth').value;
-  const allCallers = [...callerTreeNodes, ...(hideTests ? [] : testCallers.map(t => ({ ...t, isTest: true })))];
-  const filtered = allCallers.filter(n => {
+  var hideTests = document.getElementById('filter-hide-tests').checked;
+  var layerF = document.getElementById('filter-layer').value;
+  var depthF = document.getElementById('filter-depth').value;
+  var allCallers = _callerTreeNodes.concat(hideTests ? [] : _testCallers.map(function(t) { return Object.assign({}, t, { isTest: true }); }));
+  var filtered = allCallers.filter(function(n) {
     if (hideTests && n.isTest) return false;
     if (layerF && n.layer !== layerF) return false;
     if (depthF && String(n.depth) !== depthF) return false;
     return true;
   });
-  document.getElementById('callers-count-badge').textContent = `(${filtered.length})`;
-  const tbody = document.getElementById('callers-tbody');
+  document.getElementById('callers-count-badge').textContent = '(' + filtered.length + ')';
+  var tbody = document.getElementById('callers-tbody');
   if (!filtered.length) { tbody.innerHTML = '<tr><td colspan="6" style="color:var(--text-muted);text-align:center">No callers found</td></tr>'; return; }
-  tbody.innerHTML = filtered.map(n => {
-    const rowCls = n.isTest ? 'test-row' : (n.stale ? 'stale-row' : '');
-    const testTag = n.isTest ? '<span class="tag tag-test">test</span>' : '';
-    const staleTag = n.stale ? '<span class="tag tag-stale">stale</span>' : '';
-    const multiTag = n.run_count > 1 ? `<span class="tag tag-multi">${n.run_count}x</span>` : '';
-    const fileShort = (n.file || '').split(/[/\\]/).slice(-2).join('/');
-    return `<tr class="${rowCls}"><td>${n.depth||'?'}</td><td>${esc(n.class_name)}${staleTag}${multiTag}</td><td>${esc(n.method_name||n.call_expression||'')}</td><td title="${esc(n.file)}">${esc(fileShort)}</td><td>${n.line_number||'?'}</td><td><span class="badge ${layerBadgeClass(n.layer)}">${esc(n.layer||'?')}</span>${testTag}</td></tr>`;
+  tbody.innerHTML = filtered.map(function(n) {
+    var rowCls = n.isTest ? 'test-row' : (n.stale ? 'stale-row' : '');
+    var testTag = n.isTest ? '<span class="tag tag-test">test</span>' : '';
+    var staleTag = n.stale ? '<span class="tag tag-stale">stale</span>' : '';
+    var multiTag = n.run_count > 1 ? '<span class="tag tag-multi">' + n.run_count + 'x</span>' : '';
+    var fileShort = (n.file || '').split(/[/\\]/).slice(-2).join('/');
+    return '<tr class="' + rowCls + '"><td>' + (n.depth || '?') + '</td><td>' + esc(n.class_name) + staleTag + multiTag + '</td><td>' + esc(n.method_name || n.call_expression || '') + '</td><td title="' + esc(n.file) + '">' + esc(fileShort) + '</td><td>' + (n.line_number || '?') + '</td><td><span class="badge ' + layerBadgeClass(n.layer) + '">' + esc(n.layer || '?') + '</span>' + testTag + '</td></tr>';
   }).join('');
 }
-renderCallersTable();
 
-// ─── Callees table ─────────────────────────────────────────────────────────────
+// ─── Callees table (also called from filter onchange) ─────────────────────────
 function renderCalleesTable() {
-  const ioOnly = document.getElementById('filter-io-only').checked;
-  const filtered = callees.filter(c => !ioOnly || c.is_external_io);
-  document.getElementById('callees-count-badge').textContent = `(${filtered.length})`;
-  const tbody = document.getElementById('callees-tbody');
+  var ioOnly = document.getElementById('filter-io-only').checked;
+  var filtered = _callees.filter(function(c) { return !ioOnly || c.is_external_io; });
+  document.getElementById('callees-count-badge').textContent = '(' + filtered.length + ')';
+  var tbody = document.getElementById('callees-tbody');
   if (!filtered.length) { tbody.innerHTML = '<tr><td colspan="6" style="color:var(--text-muted);text-align:center">No callees found</td></tr>'; return; }
-  tbody.innerHTML = filtered.map(c => {
-    const rowCls = c.is_external_io ? 'io-row' : '';
-    const ioTag = c.is_external_io ? `<span class="tag ${ioTagClass(c.io_category)}">${esc(c.io_category||'I/O')}</span>` : '—';
-    const asyncTag = c.is_async ? '<span class="tag tag-async">async</span>' : '—';
-    const internalBadge = c.is_internal ? '<span style="color:var(--green)">&#10003;</span>' : '<span style="color:var(--text-dim)">ext</span>';
-    return `<tr class="${rowCls}"><td>${esc(c.receiver||'?')}</td><td>${esc(c.receiver_type||'?')}</td><td>${esc(c.method_name||'?')}</td><td>${ioTag}</td><td>${asyncTag}</td><td>${internalBadge}</td></tr>`;
+  tbody.innerHTML = filtered.map(function(c) {
+    var rowCls = c.is_external_io ? 'io-row' : '';
+    var ioTag = c.is_external_io ? '<span class="tag ' + ioTagClass(c.io_category) + '">' + esc(c.io_category || 'I/O') + '</span>' : '—';
+    var asyncTag = c.is_async ? '<span class="tag tag-async">async</span>' : '—';
+    var internalBadge = c.is_internal ? '<span style="color:var(--green)">&#10003;</span>' : '<span style="color:var(--text-dim)">ext</span>';
+    return '<tr class="' + rowCls + '"><td>' + esc(c.receiver || '?') + '</td><td>' + esc(c.receiver_type || '?') + '</td><td>' + esc(c.method_name || '?') + '</td><td>' + ioTag + '</td><td>' + asyncTag + '</td><td>' + internalBadge + '</td></tr>';
   }).join('');
 }
-renderCalleesTable();
 
-// ─── Concerns ─────────────────────────────────────────────────────────────────
-(function() {
-  if (!concerns.length) return;
-  document.getElementById('concerns-section').style.display = '';
-  document.getElementById('concerns-count-badge').textContent = `(${concerns.length})`;
-  const list = document.getElementById('concerns-list');
-  list.innerHTML = concerns.map(c => {
-    const sev = c.severity || 'warning';
-    return `<div class="concern-item ${sev}">
-      <div class="concern-title">${esc(c.issue_type||c.type||'Issue')}</div>
-      <div class="concern-desc">${esc(c.description||'')}</div>
-      ${c.offending_line ? `<div class="concern-code">${esc(c.offending_line)}</div>` : ''}
-      ${c.recommendation ? `<div class="concern-rec">&#8594; ${esc(c.recommendation)}</div>` : ''}
-    </div>`;
+// ─── Table-only fallback for large graphs ─────────────────────────────────────
+function renderNodesTable(allNodes, allEdges) {
+  var cont = document.getElementById('graph-container');
+  var edgeMap = {};
+  allEdges.forEach(function(e) {
+    if (!edgeMap[e.fi]) edgeMap[e.fi] = 0;
+    edgeMap[e.fi]++;
+  });
+  var html = '<div style="padding:12px;overflow:auto;height:100%"><table class="data-table"><thead><tr>'
+    + '<th>Class</th><th>Method</th><th>Layer</th><th>Outgoing edges</th><th>File</th>'
+    + '</tr></thead><tbody>';
+  html += allNodes.map(function(n, i) {
+    var targetMark = n.isTarget ? ' <span style="color:#58a6ff">&#9679;</span>' : '';
+    var staleMark = n.stale ? ' <span class="tag tag-stale">stale</span>' : '';
+    var fileShort = (n.file || '').split(/[/\\]/).slice(-2).join('/');
+    return '<tr><td>' + esc(n.class_name || n.name) + targetMark + staleMark + '</td>'
+      + '<td>' + esc(n.method_name || '') + '</td>'
+      + '<td><span class="badge ' + layerBadgeClass(n.layer) + '">' + esc(n.layer || '?') + '</span></td>'
+      + '<td>' + (edgeMap[i] || 0) + '</td>'
+      + '<td style="color:var(--text-muted)">' + esc(fileShort) + '</td></tr>';
   }).join('');
-})();
-
-// ─── Interface / partial ───────────────────────────────────────────────────────
-(function() {
-  if (!reportData.synthesis) return;
-  const impls = reportData.synthesis.interface_implementations || [];
-  const parts = reportData.synthesis.partial_parts || [];
-  if (!impls.length && !parts.length) return;
-  document.getElementById('iface-section').style.display = '';
-  let html = '';
-  if (impls.length) {
-    html += '<p style="font-size:13px;color:var(--text-muted);margin-bottom:8px">Implementations:</p>';
-    html += '<table class="data-table"><thead><tr><th>Class</th><th>File</th><th>Line</th></tr></thead><tbody>';
-    html += impls.map(i => `<tr><td>${esc(i.class_name)}</td><td>${esc(i.file)}</td><td>${i.line||'?'}</td></tr>`).join('');
-    html += '</tbody></table>';
-  }
-  if (parts.length) {
-    html += '<p style="font-size:13px;color:var(--text-muted);margin:12px 0 8px">Partial class parts:</p>';
-    html += '<table class="data-table"><thead><tr><th>File</th></tr></thead><tbody>';
-    html += parts.map(p => `<tr><td>${esc(p.file||p)}</td></tr>`).join('');
-    html += '</tbody></table>';
-  }
-  document.getElementById('iface-content').innerHTML = html;
-})();
+  html += '</tbody></table></div>';
+  cont.innerHTML = html;
+}
 </script>
 </body>
 </html>
