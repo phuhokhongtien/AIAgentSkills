@@ -439,7 +439,7 @@ AIAgentSkills/
 ### 2026-05-27 — `csharp-explorer` v0.1.3 (update)
 - **Fix hook file-type filter**: hook now fires after ANY Read/Grep (was silently skipping `appsettings.json`, `README.md`, `.csproj`, etc. — only fired for `.cs` files)
 - **Read-count re-notification**: lock file upgraded from empty flag to JSON `{"read_count": N}`; notifies on read #1 then every 15 reads — ensures long context sessions get periodic reminders even after compaction
-- **Virtual test suite**: `assets/hook_test.py` — 4 suites, 14 assertions, all passing (runs via `python hook_test.py`)
+- **Virtual test suite**: `assets/hook_test.py` — 7 suites, 23 assertions, all passing; includes mixed file-type session, multi-turn back-and-fork conversation, and Grep+Read interleaved scenarios (runs via `python hook_test.py`)
 
 ### 2026-05-27 — `csharp-explorer` v0.1.2 (update)
 - **fetch-based report server**: Phase S now writes `data.json` + slim `index.html` to `~/.claude/csharp-explorer/<project>/report/`, starts `python -m http.server 7657`, and opens `http://localhost:7657/` — no more embedded JSON in HTML (fixes Write tool timeout and browser crash on large stores)
