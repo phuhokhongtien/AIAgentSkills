@@ -1,15 +1,17 @@
 """
-Virtual test for csharp-explorer hook.py (v0.1.4)
+Virtual test for csharp-explorer hook.py (v0.1.5)
 
 Two-mode behavior under test:
   Mode A — Auto-analyze: Read <unanalyzed>.cs  → print INSTRUCTION to Claude
   Mode B — Read-count:   Everything else        → notify at read #1, every 15 reads
 
+v0.1.5: Hook reads from stdin JSON (tool_name, tool_input, cwd) — not env vars.
+
 Suites:
   1. Mode B fires for all non-.cs file types
   2. Mode B read-count re-notification (NOTIFY_INTERVAL=15) — Mode B files only
-  3. No store -> always silent
-  4. Unknown project -> always silent
+  3. Empty store (no runs) -> Mode A still fires; Mode B silent
+  4. Unknown project (no store dir) -> always silent
   5. Mixed session — Mode A and Mode B are independent (don't interfere)
   6. Multi-turn back-and-fork — Mode B counter persists across conversation turns
   7. Grep + Read interleaved — Grep counts toward Mode B interval
@@ -68,18 +70,20 @@ class HookTestEnv:
 
     def run_hook(self, tool_name="Read", file_path="appsettings.json",
                  glob_pattern="", grep_path=""):
-        env = {
-            **os.environ,
-            "TOOL_NAME": tool_name,
-            "TOOL_INPUT": json.dumps({
+        # v0.1.5: hook reads from stdin JSON (Claude Code passes data this way)
+        hook_data = json.dumps({
+            "tool_name": tool_name,
+            "tool_input": {
                 "file_path": file_path,
                 "glob": glob_pattern,
                 "path": grep_path,
-            }),
-        }
+            },
+            "cwd": str(self.project_dir),
+            "hook_event_name": "PostToolUse",
+        })
         result = subprocess.run(
             [sys.executable, str(self.hook_path)],
-            env=env, capture_output=True, text=True,
+            input=hook_data, capture_output=True, text=True,
             cwd=str(self.project_dir),
         )
         return result.stdout.strip()
@@ -224,13 +228,15 @@ def run_tests():
 
     env2.cleanup()
 
-    # ── Suite 3: No store -> always silent ────────────────────────────────────
-    print(f"\n{BOLD}{HEAD}Suite 3 — No store -> always silent{RESET}")
+    # ── Suite 3: Empty store (no runs) ────────────────────────────────────────
+    # Mode A still fires for non-skip .cs (bootstrap). Mode B silent (no runs).
+    # Program.cs is in skip list → silent. non-.cs → Mode B → silent (no runs).
+    print(f"\n{BOLD}{HEAD}Suite 3 — Empty store (no runs): Mode A bootstraps, Mode B silent{RESET}")
     env3 = HookTestEnv("emptyproject", num_runs=0)
     out = env3.run_hook(file_path="Program.cs")
-    check("No runs in store -> silent (.cs file)", out, expect_notify=False)
+    check("No runs, Program.cs (skip list) -> silent", out, expect_notify=False)
     out = env3.run_hook(file_path="appsettings.json")
-    check("No runs in store -> silent (non-.cs file)", out, expect_notify=False)
+    check("No runs, non-.cs file -> Mode B silent (needs prior runs)", out, expect_notify=False)
     env3.cleanup()
 
     # ── Suite 4: Unknown project (no store dir) ───────────────────────────────
@@ -238,14 +244,21 @@ def run_tests():
     env4 = HookTestEnv("unknownproject", num_runs=2)
     other_dir = env4.tmpdir / "otherproject"
     other_dir.mkdir()
+    # Uses a .cs file NOT in skip list — but store dir for "otherproject" doesn't
+    # exist, so hook exits silently (no store dir = init not run for this project)
+    hook_data = json.dumps({
+        "tool_name": "Read",
+        "tool_input": {"file_path": "SomeService.cs"},
+        "cwd": str(other_dir),
+        "hook_event_name": "PostToolUse",
+    })
     result = subprocess.run(
         [sys.executable, str(env4.hook_path)],
-        env={**os.environ, "TOOL_NAME": "Read",
-             "TOOL_INPUT": json.dumps({"file_path": "Program.cs"})},
-        capture_output=True, text=True, cwd=str(other_dir),
+        input=hook_data, capture_output=True, text=True,
+        cwd=str(other_dir),
     )
     out = result.stdout.strip()
-    check("Different project cwd -> silent (no store match)", out, expect_notify=False)
+    check("Different project cwd -> silent (no store dir for otherproject)", out, expect_notify=False)
     env4.cleanup()
 
     # ── Suite 5: Mixed session — Mode A and Mode B independence ──────────────
@@ -430,7 +443,7 @@ def run_tests():
 
     # ── Suite 8: Auto-analyze Mode A ─────────────────────────────────────────
     # Tests the v0.1.4 Mode A behavior: unanalyzed .cs → INSTRUCTION.
-    print(f"\n{BOLD}{HEAD}Suite 8 — Auto-analyze instruction (v0.1.4 Mode A){RESET}")
+    print(f"\n{BOLD}{HEAD}Suite 8 — Auto-analyze instruction (v0.1.5 Mode A){RESET}")
     env8 = HookTestEnv("salonapp", num_runs=3)
     # Store: OrderService, PaymentService, CustomerController
 
@@ -485,11 +498,14 @@ def run_tests():
         out = env8.run_hook(tool_name="Read", file_path=fpath)
         check(f"Read {label} -> silent", out, expect_notify=False)
 
-    # 8l: Empty store → Mode A never fires (no prior runs = silent for everything)
+    # 8l: Empty store (no runs) → Mode A fires (bootstrap mode)
+    # store directory exists (init was run), but no JSON runs yet.
+    # Mode A should fire and instruct Claude to analyze the class.
     env_empty = HookTestEnv("brandnewproject", num_runs=0)
     out = env_empty.run_hook(tool_name="Read", file_path="src/NewService.cs")
-    check("Read unanalyzed .cs, empty store -> silent (needs prior runs)",
-          out, expect_notify=False)
+    has_inst_empty = "INSTRUCTION" in out and "NewService" in out
+    check("Read unanalyzed .cs, empty store -> Mode A fires (bootstrap)",
+          "[csharp-explorer]" if has_inst_empty else "", expect_notify=True)
     env_empty.cleanup()
 
     # 8m: Grep tool → always Mode B (auto-analyze only on Read of .cs)
@@ -507,13 +523,13 @@ def run_tests():
     passed = sum(results)
     print(f"\n{BOLD}Results: {passed}/{total} passed{RESET}")
     if passed == total:
-        print(f"{PASS} -- All tests passed -- hook v0.1.4 behaves correctly")
+        print(f"{PASS} -- All tests passed -- hook v0.1.5 behaves correctly")
     else:
         print(f"{FAIL} -- {total - passed} test(s) failed")
         sys.exit(1)
 
 
 if __name__ == "__main__":
-    print(f"{BOLD}csharp-explorer hook.py — Virtual Test Suite (v0.1.4){RESET}")
+    print(f"{BOLD}csharp-explorer hook.py — Virtual Test Suite (v0.1.5){RESET}")
     print("=" * 55)
     run_tests()
