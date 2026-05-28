@@ -25,7 +25,7 @@ Debug any API endpoint by tracing the full request flow — from curl to respons
 - **Precise log parsing**: ANSI-stripping pre-processor → canonical clean log; anchored per-framework patterns replace naive `grep SELECT|INSERT` (eliminates false positives from stack traces and JSON request bodies); ripgrep multiline for multi-line query blocks
 - **Rich DB Queries dashboard**: interactive table with expandable rows, CSS-only SQL syntax highlight, filter (All / Slow / N+1), sort, search, copy-SQL button, timeline strip, N+1 shape-group color coding
 
-### `csharp-explorer` — v0.1.5
+### `csharp-explorer` — v0.1.6
 
 Analyze any C# class or method in depth — trace its **call graph**, understand its **DI wiring**, detect **async anti-patterns**, and build up knowledge **day by day** across multiple sessions. Results persist in a global store and can be visualized on demand as an interactive unified diagram.
 
@@ -43,7 +43,7 @@ Analyze any C# class or method in depth — trace its **call graph**, understand
 - **Chunking-first reads**: Grep → line number → `Read` with exact `offset`/`limit` — never reads a full file blindly
 - **BFS call graph**: configurable depth (1–4), 50-node cap, cycle detection, partial class identity by `(namespace, class_name)`
 - **C# specifics**: DI injection detection, async/await analysis, partial classes, EF Core / HttpClient / MediatR patterns, layer classification (controller/service/repository/domain/handler/…)
-- **Passive auto-capture** (v0.1.5): hook reads correct stdin JSON from Claude Code and fires Mode A immediately after `init` — store grows automatically as Claude explores the codebase
+- **Passive auto-capture** (v0.1.6): hook fires `⚠️ MANDATORY INTERRUPT` with explicit `Skill tool` call syntax — agentic Claude mid-task now stops and runs the analysis before continuing
 - **Append-only global store**: each run saves JSON to `~/.claude/csharp-explorer/<project>/` — accumulates across sessions
 - **On-demand diagram** (`csharp-explorer show`): merges all stored runs, deduplicates by `(namespace, class, method)`, renders a force-directed interactive SVG with run timeline, filter controls, and stale-node detection
 
@@ -436,6 +436,11 @@ AIAgentSkills/
 ---
 
 ## Release Notes
+
+### 2026-05-28 — `csharp-explorer` v0.1.6 (fix)
+- **Stronger Mode A instruction** — the old `INSTRUCTION: Run /csharp-explorer ClassName` was too passive for agentic use. A Claude agent in the middle of a task (e.g. "create order flow feature") would see the hint and keep going. The new output uses `⚠️ MANDATORY INTERRUPT — stop your current task` language and gives the **exact Skill tool call** (`skill = "csharp-explorer"`, `args = "ClassName"`) so Claude treats it as a hard stop and acts immediately.
+- **UTF-8 stdout fix** — added `sys.stdout.reconfigure(encoding="utf-8")` so the hook doesn't crash on Windows (cp1252 default codec) when printing the ⚠️ emoji.
+- **Test harness updated** — `hook_test.py` uses `encoding="utf-8"` in all subprocess calls; all 40 tests pass.
 
 ### 2026-05-28 — `csharp-explorer` v0.1.5 (fix)
 - **CRITICAL: stdin fix** — hook was reading `TOOL_NAME`/`TOOL_INPUT` environment variables, but Claude Code passes all hook data via **stdin JSON** (`tool_name`, `tool_input`, `cwd`). The hook always exited immediately, doing nothing. Now reads `sys.stdin.read()` and parses the JSON correctly.

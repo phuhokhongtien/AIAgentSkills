@@ -1,11 +1,11 @@
 """
-Virtual test for csharp-explorer hook.py (v0.1.5)
+Virtual test for csharp-explorer hook.py (v0.1.6)
 
 Two-mode behavior under test:
-  Mode A — Auto-analyze: Read <unanalyzed>.cs  → print INSTRUCTION to Claude
+  Mode A — Auto-analyze: Read <unanalyzed>.cs  → print MANDATORY INTERRUPT to Claude
   Mode B — Read-count:   Everything else        → notify at read #1, every 15 reads
 
-v0.1.5: Hook reads from stdin JSON (tool_name, tool_input, cwd) — not env vars.
+v0.1.6: Mode A output uses MANDATORY INTERRUPT language with explicit Skill tool syntax.
 
 Suites:
   1. Mode B fires for all non-.cs file types
@@ -83,10 +83,10 @@ class HookTestEnv:
         })
         result = subprocess.run(
             [sys.executable, str(self.hook_path)],
-            input=hook_data, capture_output=True, text=True,
+            input=hook_data, capture_output=True, text=True, encoding="utf-8",
             cwd=str(self.project_dir),
         )
-        return result.stdout.strip()
+        return (result.stdout or "").strip()
 
     def reset_lock(self):
         lock = self.tmpdir / ".claude" / "csharp-explorer" / f".notified-{self.project_slug}"
@@ -254,10 +254,10 @@ def run_tests():
     })
     result = subprocess.run(
         [sys.executable, str(env4.hook_path)],
-        input=hook_data, capture_output=True, text=True,
+        input=hook_data, capture_output=True, text=True, encoding="utf-8",
         cwd=str(other_dir),
     )
-    out = result.stdout.strip()
+    out = (result.stdout or "").strip()
     check("Different project cwd -> silent (no store dir for otherproject)", out, expect_notify=False)
     env4.cleanup()
 
@@ -270,17 +270,17 @@ def run_tests():
 
     # Session mixing Mode A and Mode B reads:
     #   Mode B: non-.cs files + analyzed .cs → count ticks
-    #   Mode A: unanalyzed .cs → INSTRUCTION printed, count does NOT tick
+    #   Mode A: unanalyzed .cs → MANDATORY INTERRUPT printed, count does NOT tick
     session = [
         # (tool, file, expect_mode_a_instruction, label)
         ("Read", "appsettings.json",                   False, "non-.cs → Mode B #1 notify"),
         ("Read", "OrderService.cs",                    False, "analyzed → Mode B #2 silent"),
-        ("Read", "src/Models/NewClass.cs",             True,  "unanalyzed → Mode A INSTRUCTION"),
+        ("Read", "src/Models/NewClass.cs",             True,  "unanalyzed → Mode A MANDATORY INTERRUPT"),
         ("Read", "README.md",                          False, "non-.cs → Mode B #3 silent"),
-        ("Read", "src/Services/UnknownService.cs",     True,  "unanalyzed → Mode A INSTRUCTION"),
+        ("Read", "src/Services/UnknownService.cs",     True,  "unanalyzed → Mode A MANDATORY INTERRUPT"),
         ("Read", "PaymentService.cs",                  False, "analyzed → Mode B #4 silent"),
         ("Read", "docker-compose.yml",                 False, "non-.cs → Mode B #5 silent"),
-        ("Read", "src/Dtos/FreshDto.cs",               True,  "unanalyzed → Mode A INSTRUCTION"),
+        ("Read", "src/Dtos/FreshDto.cs",               True,  "unanalyzed → Mode A MANDATORY INTERRUPT"),
         ("Read", "CustomerController.cs",              False, "analyzed → Mode B #6 silent"),
         ("Read", "ECommerceApi.csproj",                False, "non-.cs → Mode B #7 silent"),
     ]
@@ -291,17 +291,17 @@ def run_tests():
 
     for tool, fpath, expect_instruction, label in session:
         out = env5.run_hook(tool_name=tool, file_path=fpath)
-        has_instruction = "INSTRUCTION" in out
+        has_instruction = "MANDATORY INTERRUPT" in out
         has_notify = "[csharp-explorer]" in out and not has_instruction
 
         if expect_instruction:
             mode_a_count += 1 if has_instruction else 0
             if not has_instruction:
-                print(f"  {FAIL} Expected INSTRUCTION for {fpath} but got: {out[:80]}")
+                print(f"  {FAIL} Expected MANDATORY INTERRUPT for {fpath} but got: {out[:80]}")
         else:
             if has_instruction:
                 mode_b_unexpected = True
-                print(f"  {FAIL} Unexpected INSTRUCTION for {fpath}: {out[:80]}")
+                print(f"  {FAIL} Unexpected MANDATORY INTERRUPT for {fpath}: {out[:80]}")
             if has_notify:
                 mode_b_notifies += 1
 
@@ -442,28 +442,28 @@ def run_tests():
     env7.cleanup()
 
     # ── Suite 8: Auto-analyze Mode A ─────────────────────────────────────────
-    # Tests the v0.1.4 Mode A behavior: unanalyzed .cs → INSTRUCTION.
-    print(f"\n{BOLD}{HEAD}Suite 8 — Auto-analyze instruction (v0.1.5 Mode A){RESET}")
+    # Tests Mode A behavior: unanalyzed .cs → MANDATORY INTERRUPT.
+    print(f"\n{BOLD}{HEAD}Suite 8 — Auto-analyze instruction (v0.1.6 Mode A){RESET}")
     env8 = HookTestEnv("salonapp", num_runs=3)
     # Store: OrderService, PaymentService, CustomerController
 
-    # 8a: Unanalyzed .cs → INSTRUCTION printed with class name
+    # 8a: Unanalyzed .cs → MANDATORY INTERRUPT printed with class name
     out = env8.run_hook(tool_name="Read", file_path="src/Services/SalonDbContext.cs")
-    has_inst = "INSTRUCTION" in out and "SalonDbContext" in out
-    check("Read unanalyzed SalonDbContext.cs -> INSTRUCTION",
+    has_inst = "MANDATORY INTERRUPT" in out and "SalonDbContext" in out
+    check("Read unanalyzed SalonDbContext.cs -> MANDATORY INTERRUPT",
           "[csharp-explorer]" if has_inst else "", expect_notify=True)
 
     # 8b: Another unanalyzed class in a subdirectory
     out = env8.run_hook(tool_name="Read", file_path="src/Repositories/BookingRepository.cs")
-    has_inst2 = "INSTRUCTION" in out and "BookingRepository" in out
-    check("Read unanalyzed BookingRepository.cs -> INSTRUCTION",
+    has_inst2 = "MANDATORY INTERRUPT" in out and "BookingRepository" in out
+    check("Read unanalyzed BookingRepository.cs -> MANDATORY INTERRUPT",
           "[csharp-explorer]" if has_inst2 else "", expect_notify=True)
 
-    # 8c: Already-analyzed class → Mode B (first read → notify, no INSTRUCTION)
+    # 8c: Already-analyzed class → Mode B (first read → notify, no MANDATORY INTERRUPT)
     env8.reset_lock()
     out = env8.run_hook(tool_name="Read", file_path="src/Services/OrderService.cs")
-    is_mode_b = "[csharp-explorer]" in out and "INSTRUCTION" not in out
-    check("Read already-analyzed OrderService.cs -> Mode B notify (no INSTRUCTION)",
+    is_mode_b = "[csharp-explorer]" in out and "MANDATORY INTERRUPT" not in out
+    check("Read already-analyzed OrderService.cs -> Mode B notify (no MANDATORY INTERRUPT)",
           "[csharp-explorer]" if is_mode_b else "", expect_notify=True)
 
     # 8d: Method-level analysis stored → class still treated as analyzed
@@ -471,8 +471,8 @@ def run_tests():
     # Verify PaymentService.cs also treated as analyzed (it's in store)
     env8.reset_lock()
     out = env8.run_hook(tool_name="Read", file_path="PaymentService.cs")
-    is_mode_b2 = "[csharp-explorer]" in out and "INSTRUCTION" not in out
-    check("Read already-analyzed PaymentService.cs -> Mode B (no INSTRUCTION)",
+    is_mode_b2 = "[csharp-explorer]" in out and "MANDATORY INTERRUPT" not in out
+    check("Read already-analyzed PaymentService.cs -> Mode B (no MANDATORY INTERRUPT)",
           "[csharp-explorer]" if is_mode_b2 else "", expect_notify=True)
 
     # 8e–8j: Skip list — all should be silent
@@ -503,7 +503,7 @@ def run_tests():
     # Mode A should fire and instruct Claude to analyze the class.
     env_empty = HookTestEnv("brandnewproject", num_runs=0)
     out = env_empty.run_hook(tool_name="Read", file_path="src/NewService.cs")
-    has_inst_empty = "INSTRUCTION" in out and "NewService" in out
+    has_inst_empty = "MANDATORY INTERRUPT" in out and "NewService" in out
     check("Read unanalyzed .cs, empty store -> Mode A fires (bootstrap)",
           "[csharp-explorer]" if has_inst_empty else "", expect_notify=True)
     env_empty.cleanup()
@@ -512,7 +512,7 @@ def run_tests():
     env8.reset_lock()
     out = env8.run_hook(tool_name="Grep", file_path="", glob_pattern="**/*.cs",
                         grep_path="src/")
-    is_mode_b_grep = "[csharp-explorer]" in out and "INSTRUCTION" not in out
+    is_mode_b_grep = "[csharp-explorer]" in out and "MANDATORY INTERRUPT" not in out
     check("Grep **/*.cs -> Mode B notify (not Mode A)",
           "[csharp-explorer]" if is_mode_b_grep else "", expect_notify=True)
 
@@ -523,13 +523,13 @@ def run_tests():
     passed = sum(results)
     print(f"\n{BOLD}Results: {passed}/{total} passed{RESET}")
     if passed == total:
-        print(f"{PASS} -- All tests passed -- hook v0.1.5 behaves correctly")
+        print(f"{PASS} -- All tests passed -- hook v0.1.6 behaves correctly")
     else:
         print(f"{FAIL} -- {total - passed} test(s) failed")
         sys.exit(1)
 
 
 if __name__ == "__main__":
-    print(f"{BOLD}csharp-explorer hook.py — Virtual Test Suite (v0.1.5){RESET}")
+    print(f"{BOLD}csharp-explorer hook.py — Virtual Test Suite (v0.1.6){RESET}")
     print("=" * 55)
     run_tests()
