@@ -10,7 +10,7 @@ Canonical content for the PostToolUse hook installed by Phase I.
 """
 csharp-explorer PostToolUse hook.
 Installed by: /csharp-explorer init
-v0.1.5
+v0.1.6
 
 Two-mode behavior:
   MODE A — Auto-analyze (unanalyzed .cs file read):
@@ -24,18 +24,24 @@ Two-mode behavior:
     notifies on read #1, re-notifies every NOTIFY_INTERVAL reads.
     Handles long context sessions with periodic reminders.
 
+v0.1.6 changes vs v0.1.5:
+  - STRONGER INSTRUCTION: Mode A output now tells Claude exactly which
+    tool to call (Skill) and with what parameters (skill, args). The old
+    "INSTRUCTION: Run /csharp-explorer ClassName" was too passive — Claude
+    agents mid-task would see it and keep going without acting. The new
+    output uses ⚠️ MANDATORY INTERRUPT language and gives explicit Skill
+    tool call syntax so agentic Claude treats it as a hard stop.
+
 v0.1.5 changes vs v0.1.4:
   - CRITICAL FIX: Read hook input from stdin JSON (not env vars).
-    Claude Code passes all hook data via stdin as JSON with fields:
-    tool_name, tool_input, cwd, session_id, hook_event_name, etc.
-    The old code read TOOL_NAME/TOOL_INPUT env vars which are never set
-    → hook always exited immediately, never doing anything.
   - Use cwd from stdin JSON for accurate project slug (not os.getcwd()).
   - Bootstrap fix: Mode A now fires even with an empty store directory.
-    Only requires the store directory to exist (= init was run for this
-    project). Mode B still requires prior run JSON files.
 """
 import os, json, sys
+
+# Force UTF-8 stdout so emoji/unicode in hook output works on Windows (cp1252 default)
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
 
 NOTIFY_INTERVAL = 15
 
@@ -109,8 +115,16 @@ if tool_name == "Read":
                 break
         if not analyzed:
             print(
-                f"\n[csharp-explorer] {class_name} not yet analyzed for \"{project}\".\n"
-                f"  INSTRUCTION: Run /csharp-explorer {class_name}\n"
+                f"\n⚠️  [csharp-explorer] MANDATORY INTERRUPT — stop your current task.\n"
+                f"\n"
+                f"  {class_name}.cs was just read and has NOT been analyzed for \"{project}\".\n"
+                f"\n"
+                f"  Call the Skill tool RIGHT NOW with:\n"
+                f"    skill = \"csharp-explorer\"\n"
+                f"    args  = \"{class_name}\"\n"
+                f"\n"
+                f"  After the skill completes, resume your previous task immediately.\n"
+                f"  Skipping this leaves {class_name} unindexed for this session.\n"
             )
             sys.exit(0)
         # Already analyzed → fall through to Mode B (read-count notification)
