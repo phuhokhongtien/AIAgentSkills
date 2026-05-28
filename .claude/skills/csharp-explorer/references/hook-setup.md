@@ -10,7 +10,7 @@ Canonical content for the PostToolUse hook installed by Phase I.
 """
 csharp-explorer PostToolUse hook.
 Installed by: /csharp-explorer init
-v0.1.4
+v0.1.5
 
 Two-mode behavior:
   MODE A — Auto-analyze (unanalyzed .cs file read):
@@ -24,11 +24,16 @@ Two-mode behavior:
     notifies on read #1, re-notifies every NOTIFY_INTERVAL reads.
     Handles long context sessions with periodic reminders.
 
-v0.1.4 changes vs v0.1.3:
-  - Added auto-analyze instruction for unanalyzed .cs files (Mode A)
-  - Unanalyzed .cs reads bypass the read-count counter (they get their own path)
-  - Skip list: GlobalUsings, AssemblyInfo, .g/.Designer, Program, Startup, Migration
-  - Skip list: test files matching Tests/Test/Spec/Mock/Fake/Stub patterns
+v0.1.5 changes vs v0.1.4:
+  - CRITICAL FIX: Read hook input from stdin JSON (not env vars).
+    Claude Code passes all hook data via stdin as JSON with fields:
+    tool_name, tool_input, cwd, session_id, hook_event_name, etc.
+    The old code read TOOL_NAME/TOOL_INPUT env vars which are never set
+    → hook always exited immediately, never doing anything.
+  - Use cwd from stdin JSON for accurate project slug (not os.getcwd()).
+  - Bootstrap fix: Mode A now fires even with an empty store directory.
+    Only requires the store directory to exist (= init was run for this
+    project). Mode B still requires prior run JSON files.
 """
 import os, json, sys
 
@@ -43,29 +48,34 @@ AUTO_ANALYZE_SKIP = [
 TEST_PATTERNS = ["tests", "test", "spec", "mock", "fake", "stub"]
 
 try:
-    tool_input = json.loads(os.environ.get("TOOL_INPUT", "{}"))
+    data = json.loads(sys.stdin.read() or "{}")
 except Exception:
     sys.exit(0)
 
-tool_name = os.environ.get("TOOL_NAME", "")
+tool_name = data.get("tool_name", "")
+tool_input = data.get("tool_input", {})
 
 # Only handle Read and Grep tool calls
 if tool_name not in ("Read", "Grep"):
     sys.exit(0)
 
-# Resolve project slug from cwd
-raw = os.path.basename(os.getcwd())
+# Resolve project slug from cwd in hook data (more reliable than os.getcwd())
+raw_cwd = data.get("cwd", os.getcwd())
+raw = os.path.basename(raw_cwd)
 project = raw.lower().replace(" ", "-").replace(".", "-")
 
-# Check store — must exist and have at least one prior run
+# store_parent must exist — created by Phase I init, signals hook is active
 store_parent = os.path.join(os.path.expanduser("~"), ".claude", "csharp-explorer")
+if not os.path.isdir(store_parent):
+    sys.exit(0)
+
+# store is project-specific — created by Phase I init for this project
 store = os.path.join(store_parent, project)
 if not os.path.isdir(store):
     sys.exit(0)
 
+# runs may be empty on a fresh init (Mode A still fires; Mode B requires runs)
 runs = [f for f in os.listdir(store) if f.endswith(".json")]
-if not runs:
-    sys.exit(0)
 
 # ── MODE A: Auto-analyze — unanalyzed .cs file ───────────────────────────────
 if tool_name == "Read":
@@ -106,6 +116,10 @@ if tool_name == "Read":
         # Already analyzed → fall through to Mode B (read-count notification)
 
 # ── MODE B: Read-count re-notification ───────────────────────────────────────
+# Requires prior runs — no point notifying if there is no accumulated data yet
+if not runs:
+    sys.exit(0)
+
 lock = os.path.join(store_parent, ".notified-" + project)
 state = {"read_count": 0}
 if os.path.exists(lock):
@@ -149,7 +163,25 @@ print(
 
 ## Hook entry for `~/.claude/settings.json`
 
-Phase I injects this into the `hooks.PostToolUse` array:
+Phase I injects this into the `hooks.PostToolUse` array.
+
+**IMPORTANT — use the absolute path with forward slashes**, not `~`.
+
+Two reasons:
+1. Tilde is not expanded for native executables by PowerShell/cmd.exe on Windows
+2. Backslashes are stripped by bash as escape characters (`\U` → `U`, `\A` → `A`, etc.)
+
+During Phase I, compute the path with forward slashes:
+
+```python
+import os
+p = os.path.join(os.path.expanduser("~"), ".claude", "csharp-explorer", "hook.py")
+hook_path = p.replace("\\", "/")
+# → C:/Users/Admin/.claude/csharp-explorer/hook.py  (Windows)
+# → /home/user/.claude/csharp-explorer/hook.py      (macOS/Linux)
+```
+
+Then write that path into the command field:
 
 ```json
 {
@@ -157,13 +189,13 @@ Phase I injects this into the `hooks.PostToolUse` array:
   "hooks": [
     {
       "type": "command",
-      "command": "python ~/.claude/csharp-explorer/hook.py"
+      "command": "python C:/Users/Admin/.claude/csharp-explorer/hook.py"
     }
   ]
 }
 ```
 
-**Idempotency check**: before injecting, search existing `hooks.PostToolUse` entries for any command containing `csharp-explorer/hook.py`. Skip if already present.
+**Idempotency check**: before injecting, search existing `hooks.PostToolUse` entries for any command containing `csharp-explorer`. Skip if already present.
 
 ---
 
@@ -178,13 +210,12 @@ Phase I injects this into the `hooks.PostToolUse` array:
         "hooks": [
           {
             "type": "command",
-            "command": "python ~/.claude/csharp-explorer/hook.py"
+            "command": "python C:/Users/Admin/.claude/csharp-explorer/hook.py"
           }
         ]
       }
     ]
   }
-  // ... rest of existing settings ...
 }
 ```
 

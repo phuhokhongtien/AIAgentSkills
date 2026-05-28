@@ -25,7 +25,7 @@ Debug any API endpoint by tracing the full request flow — from curl to respons
 - **Precise log parsing**: ANSI-stripping pre-processor → canonical clean log; anchored per-framework patterns replace naive `grep SELECT|INSERT` (eliminates false positives from stack traces and JSON request bodies); ripgrep multiline for multi-line query blocks
 - **Rich DB Queries dashboard**: interactive table with expandable rows, CSS-only SQL syntax highlight, filter (All / Slow / N+1), sort, search, copy-SQL button, timeline strip, N+1 shape-group color coding
 
-### `csharp-explorer` — v0.1.4
+### `csharp-explorer` — v0.1.5
 
 Analyze any C# class or method in depth — trace its **call graph**, understand its **DI wiring**, detect **async anti-patterns**, and build up knowledge **day by day** across multiple sessions. Results persist in a global store and can be visualized on demand as an interactive unified diagram.
 
@@ -43,7 +43,7 @@ Analyze any C# class or method in depth — trace its **call graph**, understand
 - **Chunking-first reads**: Grep → line number → `Read` with exact `offset`/`limit` — never reads a full file blindly
 - **BFS call graph**: configurable depth (1–4), 50-node cap, cycle detection, partial class identity by `(namespace, class_name)`
 - **C# specifics**: DI injection detection, async/await analysis, partial classes, EF Core / HttpClient / MediatR patterns, layer classification (controller/service/repository/domain/handler/…)
-- **Passive auto-capture** (v0.1.4): hook detects any unanalyzed `.cs` file read and injects an INSTRUCTION telling Claude to run `/csharp-explorer <ClassName>` immediately — store grows automatically as Claude explores the codebase
+- **Passive auto-capture** (v0.1.5): hook reads correct stdin JSON from Claude Code and fires Mode A immediately after `init` — store grows automatically as Claude explores the codebase
 - **Append-only global store**: each run saves JSON to `~/.claude/csharp-explorer/<project>/` — accumulates across sessions
 - **On-demand diagram** (`csharp-explorer show`): merges all stored runs, deduplicates by `(namespace, class, method)`, renders a force-directed interactive SVG with run timeline, filter controls, and stale-node detection
 
@@ -385,7 +385,7 @@ AIAgentSkills/
 ├── skills/                            ← source-of-truth mirror of .claude/skills/
 │   ├── api-flow-debugger/
 │   ├── agent-debate-team/
-│   ├── csharp-explorer/               ← v0.1.4 — auto-analyze unanalyzed .cs files, Mode A + Mode B hook
+│   ├── csharp-explorer/               ← v0.1.5 — stdin fix, bootstrap fix, forward-slash path
 │   ├── testing-explorer/
 │   ├── testing-strategy/              ← v0.1.2 — testing strategy advisor (scope + overlap)
 │   ├── agent-forge-team/              ← includes references/ticket-ingestion.md (v0.2.0)
@@ -436,6 +436,13 @@ AIAgentSkills/
 ---
 
 ## Release Notes
+
+### 2026-05-28 — `csharp-explorer` v0.1.5 (fix)
+- **CRITICAL: stdin fix** — hook was reading `TOOL_NAME`/`TOOL_INPUT` environment variables, but Claude Code passes all hook data via **stdin JSON** (`tool_name`, `tool_input`, `cwd`). The hook always exited immediately, doing nothing. Now reads `sys.stdin.read()` and parses the JSON correctly.
+- **Path fix** — hook command now uses an absolute forward-slash path (e.g. `C:/Users/Admin/.claude/csharp-explorer/hook.py`). Tilde (`~`) is not expanded by PowerShell/cmd.exe for native executables; backslashes are stripped by bash as escape characters. Forward slashes work in all shells and Python on Windows.
+- **Bootstrap fix** — Mode A (auto-analyze) now fires immediately after `init`, even before the first manual analysis run. Previously required existing run JSON files, creating a chicken-and-egg deadlock. Fix: Phase I creates the project store directory; hook fires Mode A whenever the store directory exists (even empty).
+- **`init` creates project store dir** — Phase I now creates `~/.claude/csharp-explorer/<project_slug>/` so Mode A is active right away without needing a prior run.
+- **Tests updated to v0.1.5** — all 40 assertions pass; Suite 8l expectation flipped (empty store now triggers Mode A bootstrap, not silent); Suite 4 uses stdin JSON; `run_hook()` passes data via `subprocess.run(input=...)`.
 
 ### 2026-05-27 — `csharp-explorer` v0.1.4 (update)
 - **Auto-analyze hook (Mode A)**: when AI reads an unanalyzed `.cs` file in a project with prior runs, hook injects `INSTRUCTION: Run /csharp-explorer <ClassName>` — Claude acts on it immediately, passively growing the store as it explores the codebase

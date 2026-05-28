@@ -17,7 +17,7 @@ description: >
   "what is X", "show me X", "analyze X", "understand X".
   This skill loads prior knowledge from a persistent store — invoke it even
   for repeat questions to benefit from cached call graph data.
-version: 0.1.4
+version: 0.1.5
 tools: Read, Glob, Grep, Write, AskUserQuestion
 ---
 
@@ -424,31 +424,49 @@ Use the `Write` tool. Create the `~/.claude/csharp-explorer/` directory first if
 
 The exact content to write is the `hook.py` block in `references/hook-setup.md`.
 
+### Step 1b — Create project store directory
+
+Resolve `project_slug` from the current working directory (same algorithm as Phase 0).
+
+Create the directory: `~/.claude/csharp-explorer/<project_slug>/`
+
+This enables Mode A (auto-analyze) to fire immediately after init, even before
+the first manual analysis. Without this directory, the hook exits silently.
+
+Use Bash: `mkdir -p ~/.claude/csharp-explorer/<project_slug>/`
+(Windows: use `New-Item -ItemType Directory -Force "$env:USERPROFILE\.claude\csharp-explorer\<project_slug>"`)
+
 ### Step 2 — Update `~/.claude/settings.json`
 
 1. Read `~/.claude/settings.json`
 2. Parse JSON
-3. **Idempotency check**: scan `hooks.PostToolUse[]` for any entry whose `command` contains `csharp-explorer/hook.py` — if found, print "Hook already installed." and skip to Step 4
-4. If `hooks` key missing → add `"hooks": {}`
-5. If `hooks.PostToolUse` missing → add `"PostToolUse": []`
-6. Append this entry to `hooks.PostToolUse`:
+3. **Idempotency check**: scan `hooks.PostToolUse[]` for any entry whose `command` contains `csharp-explorer` — if found, print "Hook already installed." and skip to Step 4
+4. Compute the **absolute path** to `hook.py` using forward slashes (safe in all shells
+   — backslashes are stripped by bash as escape characters):
+   - Run: `python -c "import os; p=os.path.join(os.path.expanduser('~'),'.claude','csharp-explorer','hook.py'); print(p.replace(chr(92),'/'))"` 
+   - Example output: `C:/Users/Admin/.claude/csharp-explorer/hook.py`
+   - Use the printed path as `<hook_abs_path>` in the command below
+5. If `hooks` key missing → add `"hooks": {}`
+6. If `hooks.PostToolUse` missing → add `"PostToolUse": []`
+7. Append this entry to `hooks.PostToolUse` (substituting the real absolute path):
 ```json
 {
   "matcher": "Read|Grep",
   "hooks": [
     {
       "type": "command",
-      "command": "python ~/.claude/csharp-explorer/hook.py"
+      "command": "python <hook_abs_path>"
     }
   ]
 }
 ```
-7. Write the updated JSON back to `~/.claude/settings.json`
+8. Write the updated JSON back to `~/.claude/settings.json`
 
 ### Step 3 — Verify
 
 - Confirm `~/.claude/csharp-explorer/hook.py` exists (Read the first 3 lines)
-- Confirm `~/.claude/settings.json` contains `csharp-explorer/hook.py` (Grep)
+- Confirm `~/.claude/csharp-explorer/<project_slug>/` directory exists
+- Confirm `~/.claude/settings.json` contains `csharp-explorer` in a hook command (Grep)
 
 ### Step 4 — Print summary
 
@@ -456,21 +474,24 @@ The exact content to write is the `hook.py` block in `references/hook-setup.md`.
 csharp-explorer — Init complete
 
 Hook script:  ~/.claude/csharp-explorer/hook.py
+Store dir:    ~/.claude/csharp-explorer/<project_slug>/  [created]
 Settings:     ~/.claude/settings.json  [hook added]
 
 How it works:
   Mode A — Auto-analyze (unanalyzed .cs files):
+    • Active immediately after init (no prior runs needed)
     • AI reads SomeClass.cs not yet in the store
     • Hook prints: INSTRUCTION: Run /csharp-explorer SomeClass
     • Claude runs the analysis immediately → store grows passively
     • Skips: generated files, Program.cs, Startup.cs, test files
 
   Mode B — Read-count reminder (already-analyzed + all other files):
+    • Activates after first analysis run completes
     • Notifies on read #1, then every 15 reads
     • Ensures long context sessions keep getting reminders
 
 Next steps:
-  • Open any C# project and ask about a class to start building your store
+  • Start reading any .cs file — hook will prompt you to analyze it
   • /csharp-explorer <ClassName>   — analyze a class or method
   • /csharp-explorer show          — visualize all accumulated data
 ```
